@@ -11,7 +11,7 @@
   top: 10px;
 }
 
-.login-button, .bracket-button {
+.login-button, .bracket-button, .input-field, .password-input {
   font-family: 'Silkscreen', cursive;
   margin: 5px;
   padding: 10px;
@@ -23,6 +23,11 @@
   width: 200px; /* Adjust width as needed */
   height: 50px; /* Adjust height as needed */
 }
+
+.input-field {
+  width: 250px; /* Example width, adjust as needed */
+}
+
 
 /* Add additional CSS based on your design preferences */
 
