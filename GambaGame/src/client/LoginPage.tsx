@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom"; // Assuming you're using react-router for navigation
 import "./App.css";
 
 function LoginPage() {
@@ -38,6 +39,9 @@ function LoginPage() {
           />
         </div>
         <button type="submit">Log In</button>
+        <div className="create-account">
+          <p>Don't have an account? <Link to="/create-account">Create one</Link>.</p>
+        </div>
       </form>
     </div>
   );

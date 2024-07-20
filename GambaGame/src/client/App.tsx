@@ -3,6 +3,7 @@ import "./App.css";
 import { useState } from "react";
 import { BrowserRouter as Router, Route, Routes, Link, useLocation } from "react-router-dom";
 import LoginPage from "./LoginPage"; // Adjust the import path as necessary
+import CreateAccountPage from './CreateAccount';
 
 function App() {
   return (
@@ -11,6 +12,8 @@ function App() {
         <Header />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/create-account" element={<CreateAccountPage />} />
+          <Route path="/register" element={<CreateAccountPage />} />
           {/* Define other routes here */}
         </Routes>
       </div>
