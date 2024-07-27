@@ -1,14 +1,30 @@
-import express from "express";
+import express, { Request, Response } from 'express';
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import ViteExpress from "vite-express";
 import dotenv from "dotenv";
+import auth from './auth.js';
+import { AuthenticatedRequest } from './auth.js';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+// Middleware to handle CORS errors
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  );
+  next();
+});
 
 if (!process.env.MONGODB_URI) {
   console.error("MONGODB_URI environment variable is not defined");
@@ -33,7 +49,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key"; // Use environment variable for JWT secret
+const SECRET_KEY = process.env.JWT_SECRET || "RANDOM-TOKEN"; // Use environment variable for JWT secret
 
 app.post("/register", async (req, res) => {
   try {
@@ -94,4 +110,17 @@ app.post("/login", async (req, res) => {
 
 ViteExpress.listen(app, 3000, () => {
   console.log("Server is listening on port 3000...");
+});
+
+
+// Free endpoint
+app.get("/free-endpoint", (req: express.Request, res: express.Response) => {
+  res.json({ message: "You are free to access me anytime" });
+});
+
+app.get("/auth-endpoint", auth, (req: AuthenticatedRequest, res: Response) => {
+  res.json({ 
+    message: "You are authorized to access me",
+    user: req.user // Now TypeScript knows that req.user exists
+  });
 });
