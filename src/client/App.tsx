@@ -2,8 +2,8 @@ import React from "react";
 import "./App.css";
 import { useState } from "react";
 import { BrowserRouter as Router, Route, Routes, Link, useLocation } from "react-router-dom";
-import LoginPage from "./LoginPage"; // Adjust the import path as necessary
-import CreateAccountPage from './CreateAccount';
+import LoginPage from "./LoginPage.js"; // Adjust the import path as necessary
+import CreateAccountPage from './CreateAccount.js';
 
 function App() {
   return (
