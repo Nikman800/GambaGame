@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Ensure this is react-router-dom v6 or later
+import { useNavigate } from "react-router-dom";
+import { Form, Button, Container, Row, Col } from "react-bootstrap";
 import "./App.css";
 
 function CreateAccountPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const navigate = useNavigate(); // Corrected variable name for clarity
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -38,42 +39,45 @@ function CreateAccountPage() {
   };
 
   return (
-    <div className="create-account-page">
-      <form onSubmit={handleSubmit}>
-        <h2>Create Account</h2>
-        <div>
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            id="username"
-            className="input-field"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            className="input-field"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="confirmPassword">Confirm Password</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            className="input-field"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
-        <button type="submit">Create Account</button>
-      </form>
-    </div>
+    <Container className="create-account-page">
+      <Row className="justify-content-md-center">
+        <Col md={6}>
+          <h2 className="text-center">Create Account</h2>
+          <Form onSubmit={handleSubmit}>
+            <Form.Group controlId="username">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input-field"
+              />
+            </Form.Group>
+            <Form.Group controlId="password" className="mt-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+              />
+            </Form.Group>
+            <Form.Group controlId="confirmPassword" className="mt-3">
+              <Form.Label>Confirm Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input-field"
+              />
+            </Form.Group>
+            <Button variant="primary" type="submit" className="mt-3">
+              Create Account
+            </Button>
+          </Form>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 
