@@ -1,13 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col } from "react-bootstrap";
+import axios from "axios";
 import "./App.css";
 
 function CreateAccountPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (username && password && confirmPassword && password === confirmPassword) {
+      setIsButtonDisabled(false);
+    } else {
+      setIsButtonDisabled(true);
+    }
+  }, [username, password, confirmPassword]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -17,24 +28,37 @@ function CreateAccountPage() {
     }
 
     try {
-      const response = await fetch('/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const response = await axios.post('http://localhost:3000/register', {
+        username,
+        password,
       });
 
-      if (response.ok) {
-        console.log("Account created successfully");
+      if (response.status === 201) {
+        setMessage("You are Registered Successfully");
         navigate("/login");
+        console.log("User created successfully");
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || "Failed to create account");
+        setMessage("You Are Not Registered");
       }
     } catch (error) {
-      console.error("Error creating account:", error);
-      alert("An error occurred while creating the account");
+      if (axios.isAxiosError(error)) {
+        console.error("Error creating account:", error);
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+          console.error("Response status:", error.response.status);
+          console.error("Response headers:", error.response.headers);
+          setMessage(`Registration failed: ${error.response.data.message || "Unknown error"}`);
+        } else if (error.request) {
+          console.error("Request data:", error.request);
+          setMessage("Registration failed: No response from server");
+        } else {
+          console.error("Error message:", error.message);
+          setMessage(`Registration failed: ${error.message}`);
+        }
+      } else {
+        console.error("Unexpected error:", error);
+        setMessage("Registration failed: An unexpected error occurred");
+      }
     }
   };
 
@@ -71,10 +95,11 @@ function CreateAccountPage() {
                 className="input-field"
               />
             </Form.Group>
-            <Button variant="primary" type="submit" className="mt-3">
+            <Button variant="primary" type="submit" className="mt-3" disabled={isButtonDisabled}>
               Create Account
             </Button>
           </Form>
+          {message && <p className="mt-3">{message}</p>}
         </Col>
       </Row>
     </Container>
