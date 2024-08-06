@@ -1,15 +1,13 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import Cookies from 'universal-cookie';
-
-const cookies = new Cookies();
+import Cookies from 'js-cookie'; // Import js-cookie
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const token = cookies.get("TOKEN");
+  const token = Cookies.get("TOKEN"); // Use js-cookie to get the token
   const location = useLocation();
 
   if (!token) {

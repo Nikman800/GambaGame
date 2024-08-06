@@ -1,24 +1,25 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Form, Button, Container, Row, Col } from "react-bootstrap";
+import { Form, Button, Container } from "react-bootstrap";
 import "./App.css";
 import axios from "axios";
-import Cookies from "universal-cookie"; // Import universal-cookie
-
-const cookies = new Cookies(); // Initialize cookies
+import Cookies from "js-cookie"; // Import js-cookie
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    console.log("Form submitted with username:", username, "and password:", password);
 
-    axios.post("/api/login", { email, password })
+    axios.post("/login", { username, password })
       .then((result) => {
+        console.log("Login successful:", result.data);
+
         // set the cookie
-        cookies.set("TOKEN", result.data.token, {
+        Cookies.set("TOKEN", result.data.token, {
           path: "/",
         });
 
@@ -34,13 +35,13 @@ const LoginPage = () => {
     <Container>
       <h2>Login</h2>
       <Form onSubmit={handleSubmit}>
-        <Form.Group controlId="formBasicEmail">
-          <Form.Label>Email address</Form.Label>
+        <Form.Group controlId="formBasicUsername">
+          <Form.Label>Username</Form.Label>
           <Form.Control
-            type="email"
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Enter username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
         </Form.Group>
 

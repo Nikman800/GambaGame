@@ -1,13 +1,13 @@
 import React from "react";
 import { Route, Routes, Link } from "react-router-dom";
 import { Container, Navbar, Nav } from "react-bootstrap";
-import LoginPage from "./LoginPage";
-import CreateAccountPage from './CreateAccount';
-import FreeComponent from './FreeComponent';
-import AuthComponent from './AuthComponent';
-import ProtectedRoute from './ProtectedRoutes';
+import LoginPage from "./LoginPage.js";
+import CreateAccountPage from './CreateAccount.js';
+import FreeComponent from './FreeComponent.js';
+import AuthComponent from './AuthComponent.js';
+import ProtectedRoute from './ProtectedRoutes.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import HomePage from './HomePage';
+import HomePage from './HomePage.js';
 
 function App() {
   return (
