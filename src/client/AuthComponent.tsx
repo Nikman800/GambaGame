@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import React, { useEffect, useState } from "react";
+import { Button } from "react-bootstrap";
+import axios from "axios";
+import Cookies from "js-cookie"; // Import js-cookie
 
 export default function AuthComponent() {
   // Get the token generated on login
@@ -31,12 +32,25 @@ export default function AuthComponent() {
       });
   }, [token]);
 
+  // logout
+  const logout = () => {
+    // destroy the cookie
+    Cookies.remove("TOKEN", { path: "/" });
+    // redirect user to the landing page
+    window.location.href = "/";
+  };
+
   return (
-    <div>
-      <h1 className="text-center">Auth Component</h1>
+    <div className="text-center">
+      <h1>Auth Component</h1>
 
       {/* Displaying our message from our API call */}
-      <h3 className="text-center text-danger">{message}</h3>
+      <h3 className="text-danger">{message}</h3>
+
+      {/* logout */}
+      <Button type="submit" variant="danger" onClick={() => logout()}>
+        Logout
+      </Button>
     </div>
   );
 }
