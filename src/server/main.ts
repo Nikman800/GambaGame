@@ -124,3 +124,21 @@ app.get("/auth-endpoint", auth, (req: AuthenticatedRequest, res: Response) => {
     user: req.user // Now TypeScript knows that req.user exists
   });
 });
+
+app.get("/user-info", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const user = await User.findById(req.user.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ username: user.username });
+  } catch (error) {
+    console.error("Error in /user-info:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});

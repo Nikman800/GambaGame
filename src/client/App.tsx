@@ -10,23 +10,29 @@ import AuthComponent from './AuthComponent.js';
 import ProtectedRoute from './ProtectedRoutes.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import HomePage from './HomePage.js';
+import axios from 'axios';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     const token = Cookies.get("TOKEN");
+    const storedUsername = Cookies.get("USERNAME");
     setIsLoggedIn(!!token);
+    setUsername(storedUsername || "");
   }, []);
 
   const handleLogout = () => {
     Cookies.remove("TOKEN", { path: "/" });
+    Cookies.remove("USERNAME", { path: "/" });
     setIsLoggedIn(false);
+    setUsername("");
   };
 
   return (
     <div className="App">
-      <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} />
+      <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} username={username} />
       <Container>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -51,6 +57,7 @@ function App() {
 interface HeaderProps {
   isLoggedIn: boolean;
   handleLogout: () => void;
+  username: string;
 }
 
 function Header({ isLoggedIn, handleLogout }: HeaderProps) {
@@ -59,9 +66,19 @@ function Header({ isLoggedIn, handleLogout }: HeaderProps) {
 
   useEffect(() => {
     if (isLoggedIn) {
-      // Fetch username from your API or from the stored token
-      // This is a placeholder, replace with actual API call
-      setUsername("User");
+      const token = Cookies.get("TOKEN");
+      axios.get("http://localhost:3000/user-info", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        setUsername(response.data.username);
+      })
+      .catch(error => {
+        console.error("Error fetching user info:", error);
+        setUsername("User"); // Fallback to "User" if there's an error
+      });
     }
   }, [isLoggedIn]);
 

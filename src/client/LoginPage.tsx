@@ -17,19 +17,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ setIsLoggedIn }) => {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Form submitted with username:", username, "and password:", password);
-
+  
     axios.post("/login", { username, password })
       .then((result) => {
         console.log("Login successful:", result.data);
-
+  
         // set the cookie
         Cookies.set("TOKEN", result.data.token, {
           path: "/",
         });
-
+  
+        // Store the username
+        Cookies.set("USERNAME", username, {
+          path: "/",
+        });
+  
         // set isLoggedIn to true
         setIsLoggedIn(true);
-
+  
         // redirect user to the auth page
         navigate("/auth");
       })
