@@ -60,27 +60,8 @@ interface HeaderProps {
   username: string;
 }
 
-function Header({ isLoggedIn, handleLogout }: HeaderProps) {
+function Header({ isLoggedIn, handleLogout, username }: HeaderProps) {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [username, setUsername] = useState("");
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      const token = Cookies.get("TOKEN");
-      axios.get("http://localhost:3000/user-info", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-      .then(response => {
-        setUsername(response.data.username);
-      })
-      .catch(error => {
-        console.error("Error fetching user info:", error);
-        setUsername("User"); // Fallback to "User" if there's an error
-      });
-    }
-  }, [isLoggedIn]);
 
   return (
     <header className="App-header">
@@ -104,8 +85,16 @@ function Header({ isLoggedIn, handleLogout }: HeaderProps) {
         </Container>
       </Navbar>
       <Offcanvas show={showSidebar} onHide={() => setShowSidebar(false)} placement="end">
-        {/* ... Offcanvas content */}
-        <Button variant="danger" className="w-100" onClick={handleLogout}>Sign Out</Button>
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Menu</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <Button variant="primary" className="w-100 mb-2">Your Profile</Button>
+          <Button variant="primary" className="w-100 mb-2">Your Brackets</Button>
+          <Button variant="primary" className="w-100 mb-2">Create Bracket</Button>
+          <Button variant="primary" className="w-100 mb-2">Join Bracket</Button>
+          <Button variant="danger" className="w-100" onClick={handleLogout}>Sign Out</Button>
+        </Offcanvas.Body>
       </Offcanvas>
     </header>
   );
