@@ -5,7 +5,11 @@ import "./App.css";
 import axios from "axios";
 import Cookies from "js-cookie"; // Import js-cookie
 
-const LoginPage = () => {
+interface LoginPageProps {
+  setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({ setIsLoggedIn }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -22,6 +26,9 @@ const LoginPage = () => {
         Cookies.set("TOKEN", result.data.token, {
           path: "/",
         });
+
+        // set isLoggedIn to true
+        setIsLoggedIn(true);
 
         // redirect user to the auth page
         navigate("/auth");
