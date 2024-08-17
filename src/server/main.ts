@@ -142,3 +142,39 @@ app.get("/user-info", auth, async (req: AuthenticatedRequest, res: Response) => 
     res.status(500).json({ message: "Server error" });
   }
 });
+
+const bracketSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  type: { type: String, required: true },
+  participants: [{ type: String }],
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Bracket = mongoose.model("Bracket", bracketSchema);
+
+app.post("/create-bracket", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { name, description, type, participants } = req.body;
+
+    const newBracket = new Bracket({
+      name,
+      description,
+      type,
+      participants: participants.split('\n').map((p: string) => p.trim()).filter((p: string) => p),
+      createdBy: req.user.userId,
+    });
+
+    await newBracket.save();
+
+    res.status(201).json({ message: "Bracket created successfully", bracketId: newBracket._id });
+  } catch (error) {
+    console.error("Error in /create-bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
