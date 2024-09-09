@@ -188,12 +188,10 @@ app.post(
 
       await newBracket.save();
 
-      res
-        .status(201)
-        .json({
-          message: "Bracket created successfully",
-          bracketId: newBracket._id,
-        });
+      res.status(201).json({
+        message: "Bracket created successfully",
+        bracketId: newBracket._id,
+      });
     } catch (error) {
       console.error("Error in /create-bracket:", error);
       res.status(500).json({ message: "Server error" });
@@ -214,6 +212,20 @@ app.get("/brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
     res.json(brackets);
   } catch (error) {
     console.error("Error fetching brackets:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Add this route after the existing bracket-related routes
+app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+    res.json(bracket);
+  } catch (error) {
+    console.error("Error fetching bracket:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
