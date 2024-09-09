@@ -10,7 +10,9 @@ import AuthComponent from "./AuthComponent.js";
 import ProtectedRoute from "./ProtectedRoutes.js";
 import "bootstrap/dist/css/bootstrap.min.css";
 import HomePage from "./HomePage.js";
-import CreateBracketPage from "./CreateBracketPage.js"; // Import the new component
+import CreateBracketPage from "./CreateBracketPage.js";
+import MyBrackets from "./MyBrackets.js";
+import BracketPage from "./BracketPage.js";
 import axios from "axios";
 
 function App() {
@@ -61,6 +63,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <CreateBracketPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-brackets"
+            element={
+              <ProtectedRoute>
+                <MyBrackets />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bracket/:id"
+            element={
+              <ProtectedRoute>
+                <BracketPage />
               </ProtectedRoute>
             }
           />
@@ -127,7 +145,7 @@ function Header({ isLoggedIn, handleLogout, username }: HeaderProps) {
             </Nav.Link>
             <Nav.Link
               as={Link}
-              to="/your-brackets"
+              to="/my-brackets"
               className="w-100 mb-2 btn btn-primary"
             >
               Your Brackets

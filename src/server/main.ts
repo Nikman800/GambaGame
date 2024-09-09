@@ -1,11 +1,11 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import ViteExpress from "vite-express";
 import dotenv from "dotenv";
-import auth from './auth.js';
-import { AuthenticatedRequest } from './auth.js';
+import auth from "./auth.js";
+import { AuthenticatedRequest } from "./auth.js";
 
 dotenv.config();
 
@@ -17,11 +17,11 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
+    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization",
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS",
   );
   next();
 });
@@ -31,12 +31,13 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 
-mongoose.connect(process.env.MONGODB_URI)
+mongoose
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("Connected to MongoDB");
     console.log("Current database:", mongoose.connection.db.databaseName);
   })
-  .catch(err => console.error("Could not connect to MongoDB", err));
+  .catch((err) => console.error("Could not connect to MongoDB", err));
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
@@ -53,7 +54,7 @@ const SECRET_KEY = process.env.JWT_SECRET || "RANDOM-TOKEN"; // Use environment 
 
 app.post("/register", async (req, res) => {
   try {
-    const { username, password} = req.body;
+    const { username, password } = req.body;
 
     console.log(username, password);
 
@@ -99,7 +100,9 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY, {
+      expiresIn: "1h",
+    });
 
     res.json({ token });
   } catch (error) {
@@ -112,69 +115,105 @@ ViteExpress.listen(app, 3000, () => {
   console.log("Server is listening on port 3000...");
 });
 
-
 // Free endpoint
 app.get("/free-endpoint", (req: express.Request, res: express.Response) => {
   res.json({ message: "You are free to access me anytime" });
 });
 
 app.get("/auth-endpoint", auth, (req: AuthenticatedRequest, res: Response) => {
-  res.json({ 
+  res.json({
     message: "You are authorized to access me",
-    user: req.user // Now TypeScript knows that req.user exists
+    user: req.user, // Now TypeScript knows that req.user exists
   });
 });
 
-app.get("/user-info", auth, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
+app.get(
+  "/user-info",
+  auth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
 
-    const user = await User.findById(req.user.userId).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+      const user = await User.findById(req.user.userId).select("-password");
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
-    res.json({ username: user.username });
-  } catch (error) {
-    console.error("Error in /user-info:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+      res.json({ username: user.username });
+    } catch (error) {
+      console.error("Error in /user-info:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
 
 const bracketSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
   type: { type: String, required: true },
   participants: [{ type: String }],
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
 
-app.post("/create-bracket", auth, async (req: AuthenticatedRequest, res: Response) => {
+app.post(
+  "/create-bracket",
+  auth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { name, description, type, participants } = req.body;
+
+      const newBracket = new Bracket({
+        name,
+        description,
+        type,
+        participants: participants
+          .split("\n")
+          .map((p: string) => p.trim())
+          .filter((p: string) => p),
+        createdBy: req.user.userId,
+      });
+
+      await newBracket.save();
+
+      res
+        .status(201)
+        .json({
+          message: "Bracket created successfully",
+          bracketId: newBracket._id,
+        });
+    } catch (error) {
+      console.error("Error in /create-bracket:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
+
+// Add this new route to fetch all brackets created by the authenticated user
+app.get("/brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const { name, description, type, participants } = req.body;
+    // Fetch all brackets created by the user
+    const brackets = await Bracket.find({ createdBy: req.user.userId }).exec();
 
-    const newBracket = new Bracket({
-      name,
-      description,
-      type,
-      participants: participants.split('\n').map((p: string) => p.trim()).filter((p: string) => p),
-      createdBy: req.user.userId,
-    });
-
-    await newBracket.save();
-
-    res.status(201).json({ message: "Bracket created successfully", bracketId: newBracket._id });
+    res.json(brackets);
   } catch (error) {
-    console.error("Error in /create-bracket:", error);
+    console.error("Error fetching brackets:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
