@@ -8,12 +8,13 @@ interface BracketTreeProps {
 
 const BracketTree: React.FC<BracketTreeProps> = ({ participants }) => {
   const rounds = Math.ceil(Math.log2(participants.length));
+  const totalParticipants = Math.pow(2, rounds);
 
   const renderMatch = (roundNumber: number, matchIndex: number) => {
-    const participantsInMatch = Math.pow(2, rounds - roundNumber);
-    const startIndex = matchIndex * participantsInMatch;
-    const participant1 = roundNumber === 1 ? participants[startIndex] || 'TBD' : 'TBD';
-    const participant2 = roundNumber === 1 ? participants[startIndex + 1] || 'TBD' : 'TBD';
+    const participantsInRound = Math.pow(2, rounds - roundNumber + 1);
+    const startIndex = matchIndex * 2;
+    const participant1 = roundNumber === 1 && startIndex < participants.length ? participants[startIndex] : 'TBD';
+    const participant2 = roundNumber === 1 && startIndex + 1 < participants.length ? participants[startIndex + 1] : 'TBD';
     
     return (
       <div key={`match-${roundNumber}-${matchIndex}`} className="match">
