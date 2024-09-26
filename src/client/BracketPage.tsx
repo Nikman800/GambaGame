@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Form, Button } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import BracketTree from './BracketTree';
 
 interface Bracket {
   _id: string;
@@ -44,8 +45,8 @@ const BracketPage: React.FC = () => {
       <h1>{bracket.name}</h1>
       <p>Description: {bracket.description}</p>
       <p>Type: {bracket.type}</p>
-      <p>Participants: {bracket.participants.join(', ')}</p>
       <p>Runs: {bracket.runs}</p>
+      <BracketTree participants={bracket.participants} />
     </Container>
   );
 };
