@@ -2,23 +2,35 @@ import React, { useState } from 'react';
 import { Container, Form, Button } from 'react-bootstrap';
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import { useNavigate } from 'react-router-dom';
 
 function CreateBracketPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('');
   const [participants, setParticipants] = useState('');
+  const [startingPoints, setStartingPoints] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       const token = Cookies.get('TOKEN');
       const response = await axios.post('http://localhost:3000/create-bracket', 
-        { name, description, type, participants },
+        { name, description, type, participants, startingPoints: parseInt(startingPoints) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log(response.data);
-      // Handle successful creation (e.g., show a success message, redirect to bracket page)
+      
+      // Clear all states
+      setName('');
+      setDescription('');
+      setType('');
+      setParticipants('');
+      setStartingPoints('');
+      
+      // Navigate to the newly created bracket page
+      navigate(`/bracket/${response.data.bracketId}`);
     } catch (error) {
       console.error('Error creating bracket:', error);
       // Handle error (e.g., show error message to user)
@@ -72,6 +84,16 @@ function CreateBracketPage() {
             required 
             value={participants}
             onChange={(e) => setParticipants(e.target.value)}
+          />
+        </Form.Group>
+        <Form.Group controlId="startingPoints">
+          <Form.Label>Starting Points</Form.Label>
+          <Form.Control 
+            type="number" 
+            placeholder="Enter starting points for spectators" 
+            required 
+            value={startingPoints}
+            onChange={(e) => setStartingPoints(e.target.value)}
           />
         </Form.Group>
         <Button variant="primary" type="submit" className="mt-3">

@@ -154,6 +154,7 @@ const bracketSchema = new mongoose.Schema({
   description: { type: String },
   type: { type: String, required: true },
   participants: [{ type: String }],
+  startingPoints: { type: Number, required: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -173,7 +174,7 @@ app.post(
         return res.status(401).json({ message: "User not authenticated" });
       }
 
-      const { name, description, type, participants } = req.body;
+      const { name, description, type, participants, startingPoints } = req.body;
 
       const newBracket = new Bracket({
         name,
@@ -183,6 +184,7 @@ app.post(
           .split("\n")
           .map((p: string) => p.trim())
           .filter((p: string) => p),
+        startingPoints: Number(startingPoints),
         createdBy: req.user.userId,
       });
 
