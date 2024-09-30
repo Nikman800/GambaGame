@@ -268,3 +268,22 @@ app.put("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
     res.status(500).json({ message: "Server error" });
   }
 });
+
+app.delete("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const deletedBracket = await Bracket.findByIdAndDelete(req.params.id);
+
+    if (!deletedBracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    res.json({ message: "Bracket deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
