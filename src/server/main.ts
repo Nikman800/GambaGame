@@ -231,3 +231,40 @@ app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
     res.status(500).json({ message: "Server error" });
   }
 });
+
+app.put("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { name, description, type, participants, startingPoints } = req.body;
+
+    const updatedBracket = await Bracket.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        description,
+        type,
+        participants: participants
+          .split("\n")
+          .map((p: string) => p.trim())
+          .filter((p: string) => p),
+        startingPoints: Number(startingPoints),
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedBracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    res.json({
+      message: "Bracket updated successfully",
+      bracketId: updatedBracket._id,
+    });
+  } catch (error) {
+    console.error("Error updating bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});

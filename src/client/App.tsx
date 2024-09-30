@@ -14,6 +14,7 @@ import CreateBracketPage from "./CreateBracketPage.js";
 import MyBrackets from "./MyBrackets.js";
 import BracketPage from "./BracketPage.js";
 import axios from "axios";
+import EditBracketPage from "./EditBracketPage.js";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -79,6 +80,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <BracketPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edit-bracket/:id"
+            element={
+              <ProtectedRoute>
+                <EditBracketPage />
               </ProtectedRoute>
             }
           />
