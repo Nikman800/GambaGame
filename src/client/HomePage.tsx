@@ -1,6 +1,6 @@
 import React from "react";
 import { Container, Button } from "react-bootstrap";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 function HomePage() {
   let location = useLocation();
@@ -10,7 +10,9 @@ function HomePage() {
       <h1 style={{ fontFamily: "Silkscreen, cursive" }}>GambaGame</h1>
       {location.pathname === "/" && (
         <div className="buttons mt-3">
-          <Button variant="primary" className="me-2">Join Bracket</Button>
+          <Link to="/join-bracket">
+            <Button variant="info">Join a Bracket</Button>
+          </Link>
           <Button variant="secondary">Create Bracket</Button>
         </div>
       )}

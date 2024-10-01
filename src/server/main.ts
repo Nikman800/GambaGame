@@ -154,6 +154,7 @@ const bracketSchema = new mongoose.Schema({
   description: { type: String },
   type: { type: String, required: true },
   participants: [{ type: String }],
+  spectators: [{ type: String }], // Add this line to define spectators
   startingPoints: { type: Number, required: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -161,6 +162,8 @@ const bracketSchema = new mongoose.Schema({
     required: true,
   },
   createdAt: { type: Date, default: Date.now },
+  isOpen: { type: Boolean, default: false },
+  status: { type: String, default: "pending" }, // Add this line
 });
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
@@ -185,7 +188,7 @@ app.post(
           .map((p: string) => p.trim())
           .filter((p: string) => p),
         startingPoints: Number(startingPoints),
-        createdBy: req.user.userId,
+        createdBy: req.user.userId, // Safe to access req.user.userId here
       });
 
       await newBracket.save();
@@ -225,7 +228,11 @@ app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
     if (!bracket) {
       return res.status(404).json({ message: "Bracket not found" });
     }
-    res.json(bracket);
+    res.json({
+      bracket,
+      participants: bracket.participants,
+      spectators: bracket.spectators, // This should now work without errors
+    });
   } catch (error) {
     console.error("Error fetching bracket:", error);
     res.status(500).json({ message: "Server error" });
@@ -284,6 +291,120 @@ app.delete("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Respons
     res.json({ message: "Bracket deleted successfully" });
   } catch (error) {
     console.error("Error deleting bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/brackets/:id/open", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const updatedBracket = await Bracket.findByIdAndUpdate(
+      req.params.id,
+      { $set: { isOpen: true } },
+      { new: true }
+    );
+
+    if (!updatedBracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    res.json({ message: "Bracket opened successfully", bracketId: updatedBracket._id });
+  } catch (error) {
+    console.error("Error opening bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/brackets/:id/participants", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+    res.json(bracket.participants);
+  } catch (error) {
+    console.error("Error fetching participants:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    // Logic to start the bracket (e.g., setting a status, notifying participants)
+    bracket.status = "started"; // Assuming you have a status field
+    await bracket.save();
+
+    res.json({ message: "Bracket started successfully", bracketId: bracket._id });
+  } catch (error) {
+    console.error("Error starting bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/open-brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const openBrackets = await Bracket.find({ isOpen: true }).exec(); // Assuming isOpen is a field in your schema
+    res.json(openBrackets);
+  } catch (error) {
+    console.error("Error fetching open brackets:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    // Check if the user is already a spectator
+    if (bracket.spectators.includes(req.user.userId)) {
+      return res.status(400).json({ message: "You are already a spectator in this bracket" });
+    }
+
+    // Add the user to the spectators list
+    bracket.spectators.push(req.user.userId);
+    await bracket.save();
+
+    res.json({ message: "Successfully joined the bracket as a spectator", bracketId: bracket._id });
+  } catch (error) {
+    console.error("Error joining bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/brackets/:id/close", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const updatedBracket = await Bracket.findByIdAndUpdate(
+      req.params.id,
+      { $set: { isOpen: false, spectators: [] } },
+      { new: true }
+    );
+
+    if (!updatedBracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    res.json({ message: "Bracket closed successfully", bracketId: updatedBracket._id });
+  } catch (error) {
+    console.error("Error closing bracket:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

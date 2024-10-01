@@ -13,6 +13,8 @@ interface Bracket {
   participants: string[];
   runs: number;
   startingPoints: number;
+  spectators: string[];
+  isOpen: boolean;
 }
 
 const BracketPage: React.FC = () => {
@@ -29,7 +31,7 @@ const BracketPage: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setBracket(response.data);
+        setBracket(response.data.bracket);
       } catch (error) {
         console.error('Error fetching bracket:', error);
       }
@@ -58,6 +60,24 @@ const BracketPage: React.FC = () => {
     }
   };
 
+  const handleOpenBracket = async () => {
+    try {
+      const token = Cookies.get('TOKEN');
+      await axios.put(`http://localhost:3000/brackets/${id}/open`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      navigate(`/bracket-prep/${id}`);
+    } catch (error) {
+      console.error('Error opening bracket:', error);
+    }
+  };
+
+  const handleGoToBracketPrep = () => {
+    navigate(`/bracket-prep/${id}`);
+  };
+
   if (!bracket) {
     return <p>Loading...</p>;
   }
@@ -69,8 +89,17 @@ const BracketPage: React.FC = () => {
       <p>Type: {bracket.type}</p>
       <p>Runs: {bracket.runs}</p>
       <p>Starting Points for Spectators: {bracket.startingPoints}</p>
+      {bracket.isOpen && (
+        <p>Spectators: {bracket.spectators ? bracket.spectators.length : 0}</p>
+      )}
+      <p>Status: {bracket.isOpen ? 'Active' : 'Closed'}</p>
       <Button variant="primary" onClick={handleEdit}>Edit Bracket</Button>
       <Button variant="danger" onClick={handleDelete}>Delete Bracket</Button>
+      {bracket.isOpen ? (
+        <Button variant="success" onClick={handleGoToBracketPrep}>Go to Bracket Prep</Button>
+      ) : (
+        <Button variant="success" onClick={handleOpenBracket}>Open Bracket</Button>
+      )}
       <BracketTree participants={bracket.participants} />
     </Container>
   );
