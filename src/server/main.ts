@@ -154,7 +154,7 @@ const bracketSchema = new mongoose.Schema({
   description: { type: String },
   type: { type: String, required: true },
   participants: [{ type: String }],
-  spectators: [{ type: String }], // Add this line to define spectators
+  spectators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   startingPoints: { type: Number, required: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -224,14 +224,19 @@ app.get("/brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
 // Add this route after the existing bracket-related routes
 app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const bracket = await Bracket.findById(req.params.id);
+    const bracket = await Bracket.findById(req.params.id).populate('spectators', '_id username');
     if (!bracket) {
       return res.status(404).json({ message: "Bracket not found" });
     }
     res.json({
-      bracket,
+      bracket: {
+        ...bracket.toObject(),
+        spectators: bracket.spectators.map((spectator: any) => ({
+          _id: spectator._id,
+          username: spectator.username
+        }))
+      },
       participants: bracket.participants,
-      spectators: bracket.spectators, // This should now work without errors
     });
   } catch (error) {
     console.error("Error fetching bracket:", error);
@@ -371,12 +376,12 @@ app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Resp
     }
 
     // Check if the user is already a spectator
-    if (bracket.spectators.includes(req.user.userId)) {
+    if (bracket.spectators.some(spectator => spectator.toString() === req.user!.userId)) {
       return res.status(400).json({ message: "You are already a spectator in this bracket" });
     }
 
     // Add the user to the spectators list
-    bracket.spectators.push(req.user.userId);
+    bracket.spectators.push(new mongoose.Types.ObjectId(req.user.userId));
     await bracket.save();
 
     res.json({ message: "Successfully joined the bracket as a spectator", bracketId: bracket._id });

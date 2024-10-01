@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 const BracketPrep: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [participants, setParticipants] = useState<string[]>([]);
-  const [spectators, setSpectators] = useState<string[]>([]);
+  const [spectators, setSpectators] = useState<Array<{ _id: string, username: string }>>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,8 +19,13 @@ const BracketPrep: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
         });
+        console.log('Bracket data:', response.data);
         setParticipants(response.data.participants);
-        setSpectators(response.data.spectators);
+        setSpectators(response.data.bracket.spectators.map((spectator: any) => ({
+          _id: spectator._id,
+          username: spectator.username
+        })));
+        console.log('Spectators after setting state:', response.data.bracket.spectators);
       } catch (error) {
         console.error('Error fetching bracket details:', error);
       }
@@ -69,7 +74,7 @@ const BracketPrep: React.FC = () => {
       <p>Spectators: {spectators.length}</p>
       <ul>
         {spectators.map((spectator, index) => (
-          <li key={index}>{spectator}</li>
+          <li key={index}>{spectator.username}</li>
         ))}
       </ul>
       <Button variant="primary" onClick={handleStartBracket}>Start Bracket</Button>
