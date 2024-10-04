@@ -12,11 +12,13 @@ const JoinBracket: React.FC = () => {
     const fetchOpenBrackets = async () => {
       try {
         const token = Cookies.get('TOKEN');
+        console.log('Fetching open brackets with token:', token);
         const response = await axios.get('http://localhost:3000/open-brackets', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+        console.log('Open brackets response:', response.data);
         setOpenBrackets(response.data);
       } catch (error) {
         console.error('Error fetching open brackets:', error);

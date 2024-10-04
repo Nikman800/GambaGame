@@ -4,10 +4,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
+const decodeToken = (token: string) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
 const BracketPrep: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [participants, setParticipants] = useState<string[]>([]);
   const [spectators, setSpectators] = useState<Array<{ _id: string, username: string }>>([]);
+  const [admin, setAdmin] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +35,7 @@ const BracketPrep: React.FC = () => {
           _id: spectator._id,
           username: spectator.username
         })));
+        setAdmin(response.data.bracket.admin);
         console.log('Spectators after setting state:', response.data.bracket.spectators);
       } catch (error) {
         console.error('Error fetching bracket details:', error);
@@ -77,8 +88,20 @@ const BracketPrep: React.FC = () => {
           <li key={index}>{spectator.username}</li>
         ))}
       </ul>
-      <Button variant="primary" onClick={handleStartBracket}>Start Bracket</Button>
-      <Button variant="secondary" onClick={handleCloseBracket} className="ml-2">Close Bracket</Button>
+      {(() => {
+        const token = Cookies.get('TOKEN');
+        const decodedToken = token ? decodeToken(token) : null;
+        const userId = decodedToken ? decodedToken.userId : null;
+
+        return admin && userId && admin.toString() === userId ? (
+          <>
+            <Button variant="primary" onClick={handleStartBracket}>Start Bracket</Button>
+            <Button variant="secondary" onClick={handleCloseBracket} className="ml-2">Close Bracket</Button>
+          </>
+        ) : (
+          <p>Waiting for admin to start the bracket...</p>
+        );
+      })()}
     </Container>
   );
 };

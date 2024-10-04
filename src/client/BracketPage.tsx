@@ -20,18 +20,32 @@ interface Bracket {
 const BracketPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [bracket, setBracket] = useState<Bracket | null>(null);
+  const [admin, setAdmin] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchBracket = async () => {
       try {
         const token = Cookies.get('TOKEN');
+        if (!token) {
+          console.error('No token found');
+          return;
+        }
         const response = await axios.get(`http://localhost:3000/brackets/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         setBracket(response.data.bracket);
+        setAdmin(response.data.bracket.admin);
+        
+        // Decode the token to get the user ID
+        try {
+          const decodedToken = JSON.parse(atob(token.split('.')[1]));
+          console.log('Decoded user ID:', decodedToken.userId);
+        } catch (error) {
+          console.error('Error decoding token:', error);
+        }
       } catch (error) {
         console.error('Error fetching bracket:', error);
       }
@@ -93,13 +107,34 @@ const BracketPage: React.FC = () => {
         <p>Spectators: {bracket.spectators ? bracket.spectators.length : 0}</p>
       )}
       <p>Status: {bracket.isOpen ? 'Active' : 'Closed'}</p>
-      <Button variant="primary" onClick={handleEdit}>Edit Bracket</Button>
-      <Button variant="danger" onClick={handleDelete}>Delete Bracket</Button>
-      {bracket.isOpen ? (
-        <Button variant="success" onClick={handleGoToBracketPrep}>Go to Bracket Prep</Button>
-      ) : (
-        <Button variant="success" onClick={handleOpenBracket}>Open Bracket</Button>
-      )}
+      {(() => {
+        const token = Cookies.get('TOKEN');
+        let userId = null;
+        if (token) {
+          try {
+            const decodedToken = JSON.parse(atob(token.split('.')[1]));
+            userId = decodedToken.userId;
+          } catch (error) {
+            console.error('Error decoding token:', error);
+          }
+        }
+        
+        console.log('Admin:', admin);
+        console.log('Decoded USER_ID:', userId);
+        console.log('Comparison:', admin && userId && admin.toString() === userId);
+        
+        return admin && userId && admin.toString() === userId && (
+          <>
+            <Button variant="primary" onClick={handleEdit}>Edit Bracket</Button>
+            <Button variant="danger" onClick={handleDelete}>Delete Bracket</Button>
+            {bracket.isOpen ? (
+              <Button variant="success" onClick={handleGoToBracketPrep}>Go to Bracket Prep</Button>
+            ) : (
+              <Button variant="success" onClick={handleOpenBracket}>Open Bracket</Button>
+            )}
+          </>
+        );
+      })()}
       <BracketTree participants={bracket.participants} />
     </Container>
   );

@@ -23,11 +23,11 @@ function EditBracketPage() {
           },
         });
         const bracket = response.data;
-        setName(bracket.name);
-        setDescription(bracket.description);
-        setType(bracket.type);
-        setParticipants(bracket.participants.join('\n'));
-        setStartingPoints(bracket.startingPoints.toString());
+        setName(bracket.name || '');
+        setDescription(bracket.description || '');
+        setType(bracket.type || '');
+        setParticipants(Array.isArray(bracket.participants) ? bracket.participants.join('\n') : '');
+        setStartingPoints(bracket.startingPoints ? bracket.startingPoints.toString() : '');
       } catch (error) {
         console.error('Error fetching bracket:', error);
       }

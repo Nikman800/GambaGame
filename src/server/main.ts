@@ -164,6 +164,7 @@ const bracketSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   isOpen: { type: Boolean, default: false },
   status: { type: String, default: "pending" }, // Add this line
+  admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
@@ -189,6 +190,7 @@ app.post(
           .filter((p: string) => p),
         startingPoints: Number(startingPoints),
         createdBy: req.user.userId, // Safe to access req.user.userId here
+        admin: req.user.userId,
       });
 
       await newBracket.save();
@@ -196,6 +198,9 @@ app.post(
       res.status(201).json({
         message: "Bracket created successfully",
         bracketId: newBracket._id,
+        canEdit: true,
+        canDelete: true,
+        canOpen: true
       });
     } catch (error) {
       console.error("Error in /create-bracket:", error);
@@ -234,7 +239,8 @@ app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
         spectators: bracket.spectators.map((spectator: any) => ({
           _id: spectator._id,
           username: spectator.username
-        }))
+        })),
+        admin: bracket.admin
       },
       participants: bracket.participants,
     });
@@ -374,6 +380,9 @@ app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Resp
     if (!bracket) {
       return res.status(404).json({ message: "Bracket not found" });
     }
+
+    console.log('User:', req.user);
+    console.log('Bracket spectators:', bracket.spectators);
 
     // Check if the user is already a spectator
     if (bracket.spectators.some(spectator => spectator.toString() === req.user!.userId)) {

@@ -30,7 +30,13 @@ function CreateBracketPage() {
       setStartingPoints('');
       
       // Navigate to the newly created bracket page
-      navigate(`/bracket/${response.data.bracketId}`);
+      navigate(`/bracket/${response.data.bracketId}`, { 
+        state: { 
+          canEdit: response.data.canEdit,
+          canDelete: response.data.canDelete,
+          canOpen: response.data.canOpen
+        } 
+      });
     } catch (error) {
       console.error('Error creating bracket:', error);
       // Handle error (e.g., show error message to user)
