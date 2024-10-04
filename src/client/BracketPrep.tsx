@@ -3,6 +3,7 @@ import { Container, Button } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import BracketTree from './BracketTree';
 
 const decodeToken = (token: string) => {
   try {
@@ -76,12 +77,7 @@ const BracketPrep: React.FC = () => {
   return (
     <Container>
       <h1>Bracket Preparation</h1>
-      <p>Participants in Lobby: {participants.length}</p>
-      <ul>
-        {participants.map((participant, index) => (
-          <li key={index}>{participant}</li>
-        ))}
-      </ul>
+      <BracketTree participants={participants} />
       <p>Spectators: {spectators.length}</p>
       <ul>
         {spectators.map((spectator, index) => (
