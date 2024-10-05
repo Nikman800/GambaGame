@@ -17,7 +17,7 @@ function EditBracketPage() {
     const fetchBracket = async () => {
       try {
         const token = Cookies.get('TOKEN');
-        const response = await axios.get(`http://localhost:3000/brackets/${id}`, {
+        const response = await axios.get(`/api/brackets/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -40,7 +40,7 @@ function EditBracketPage() {
     event.preventDefault();
     try {
       const token = Cookies.get('TOKEN');
-      const response = await axios.put(`http://localhost:3000/brackets/${id}`, 
+      const response = await axios.put(`/api/brackets/${id}`, 
         { name, description, type, participants, startingPoints: parseInt(startingPoints) },
         { headers: { Authorization: `Bearer ${token}` } }
       );

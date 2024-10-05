@@ -31,7 +31,7 @@ const BracketPage: React.FC = () => {
           console.error('No token found');
           return;
         }
-        const response = await axios.get(`http://localhost:3000/brackets/${id}`, {
+        const response = await axios.get(`/api/brackets/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -62,7 +62,7 @@ const BracketPage: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this bracket?')) {
       try {
         const token = Cookies.get('TOKEN');
-        await axios.delete(`http://localhost:3000/brackets/${id}`, {
+        await axios.delete(`/api/brackets/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -77,7 +77,7 @@ const BracketPage: React.FC = () => {
   const handleOpenBracket = async () => {
     try {
       const token = Cookies.get('TOKEN');
-      await axios.put(`http://localhost:3000/brackets/${id}/open`, {}, {
+      await axios.put(`/api/brackets/${id}/open`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

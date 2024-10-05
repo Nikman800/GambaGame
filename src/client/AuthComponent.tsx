@@ -17,7 +17,7 @@ export default function AuthComponent() {
 
     const configuration = {
       method: "get",
-      url: "http://localhost:3000/auth-endpoint",
+      url: "/api/auth-endpoint",
       headers: {
         Authorization: `Bearer ${token}`,
       },

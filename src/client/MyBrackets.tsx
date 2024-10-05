@@ -29,7 +29,7 @@ const MyBrackets: React.FC = () => {
 
         console.log('Token:', token); // Debugging: Log the token
 
-        const response = await axios.get('http://localhost:3000/brackets', {
+        const response = await axios.get('/api/brackets', {
           headers: {
             Authorization: `Bearer ${token}`, // Pass the token in the Authorization header
           },

@@ -13,7 +13,7 @@ const JoinBracket: React.FC = () => {
       try {
         const token = Cookies.get('TOKEN');
         console.log('Fetching open brackets with token:', token);
-        const response = await axios.get('http://localhost:3000/open-brackets', {
+        const response = await axios.get('/api/open-brackets', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -31,7 +31,7 @@ const JoinBracket: React.FC = () => {
   const handleJoinBracket = async (id: string) => {
     try {
       const token = Cookies.get('TOKEN');
-      await axios.post(`http://localhost:3000/brackets/${id}/join`, {}, {
+      await axios.post(`/api/brackets/${id}/join`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

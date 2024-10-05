@@ -16,7 +16,7 @@ function CreateBracketPage() {
     event.preventDefault();
     try {
       const token = Cookies.get('TOKEN');
-      const response = await axios.post('http://localhost:3000/create-bracket', 
+      const response = await axios.post('/api/create-bracket', 
         { name, description, type, participants, startingPoints: parseInt(startingPoints) },
         { headers: { Authorization: `Bearer ${token}` } }
       );

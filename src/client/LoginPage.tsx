@@ -18,7 +18,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setIsLoggedIn }) => {
     event.preventDefault();
     console.log("Form submitted with username:", username, "and password:", password);
   
-    axios.post("/login", { username, password })
+    axios.post("/api/login", { username, password })
       .then((result) => {
         console.log("Login successful:", result.data);
   

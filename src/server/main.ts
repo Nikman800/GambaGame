@@ -6,6 +6,9 @@ import ViteExpress from "vite-express";
 import dotenv from "dotenv";
 import auth from "./auth.js";
 import { AuthenticatedRequest } from "./auth.js";
+import { Server } from 'socket.io';
+import http from 'http';
+import { Socket } from 'socket.io';
 
 dotenv.config();
 
@@ -111,9 +114,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-ViteExpress.listen(app, 3000, () => {
-  console.log("Server is listening on port 3000...");
-});
+// ViteExpress.listen(app, 3000, () => {
+//   console.log("Server is listening on port 3000...");
+// });
 
 // Free endpoint
 app.get("/free-endpoint", (req: express.Request, res: express.Response) => {
@@ -166,6 +169,7 @@ const bracketSchema = new mongoose.Schema({
   status: { type: String, default: "pending" }, // Add this line
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
+
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
 
@@ -421,4 +425,40 @@ app.put("/brackets/:id/close", auth, async (req: AuthenticatedRequest, res: Resp
     console.error("Error closing bracket:", error);
     res.status(500).json({ message: "Server error" });
   }
+});
+
+const server = http.createServer(app);
+const io = new Server(server);
+
+io.on('connection', (socket) => {
+  console.log('New client connected');
+
+  socket.on('startBracket', (data) => {
+    io.emit('bracketStarted', data);
+  });
+
+  socket.on('startMatch', (data) => {
+    io.emit('matchStarted', data);
+  });
+
+  socket.on('matchResult', (data) => {
+    io.emit('matchEnded', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+app.post("/brackets/:id/bet", auth, async (req: AuthenticatedRequest, res: Response) => {
+  // Handle betting logic
+});
+
+app.get("/brackets/:id/bets", auth, async (req: AuthenticatedRequest, res: Response) => {
+  // Return total bets for the current match
+});
+
+// Replace app.listen with server.listen
+server.listen(3001, () => {
+  console.log('Server is running on port 3001');
 });

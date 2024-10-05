@@ -7,10 +7,14 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
       },
-    },
-  },
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        ws: true,
+      }
+    }
+  }
 });
