@@ -25,6 +25,7 @@ const BracketPrep: React.FC = () => {
   const navigate = useNavigate();
   const [socket, setSocket] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [bracketStarted, setBracketStarted] = useState(false);
 
   useEffect(() => {
     const newSocket = io('/');
@@ -87,6 +88,7 @@ const BracketPrep: React.FC = () => {
         player2: participants[1]
       });
       setBettingPhase(true);
+      setBracketStarted(true);
       socket.emit('startBracket', { bracketId: id, round: currentRound, match: { player1: participants[0], player2: participants[1] } });
     } catch (error) {
       console.error('Error starting bracket:', error);
@@ -106,9 +108,37 @@ const BracketPrep: React.FC = () => {
     socket.emit('matchResult', { bracketId: id, round: currentRound, match: currentMatch, winner });
   };
 
+  const handleStopBracket = async () => {
+    try {
+      const token = Cookies.get('TOKEN');
+      await axios.post(`/api/brackets/${id}/stop`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setBracketStarted(false);
+      setBettingPhase(false);
+      setMatchInProgress(false);
+      setCurrentMatch(null);
+      socket.emit('stopBracket', { bracketId: id });
+      navigate(`/bracket/${id}`); // Add this line to navigate back to the bracket page
+    } catch (error) {
+      console.error('Error stopping bracket:', error);
+    }
+  };
+
   return (
     <Container>
       <h1>Bracket Preparation</h1>
+      {isAdmin && (
+        <>
+          {!bracketStarted ? (
+            <Button onClick={handleStartBracket}>Start Bracket</Button>
+          ) : (
+            <Button onClick={handleStopBracket}>Stop Bracket</Button>
+          )}
+        </>
+      )}
       <BracketTree participants={participants} />
       <p>Spectators: {spectators.length}</p>
       {bettingPhase && currentMatch && id && (
@@ -124,9 +154,6 @@ const BracketPrep: React.FC = () => {
           match={currentMatch}
           onSelectWinner={handleMatchResult}
         />
-      )}
-      {!bettingPhase && !matchInProgress && isAdmin && (
-        <Button variant="primary" onClick={handleStartBracket}>Start Bracket</Button>
       )}
     </Container>
   );

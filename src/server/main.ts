@@ -427,6 +427,34 @@ app.put("/brackets/:id/close", auth, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+app.post("/brackets/:id/stop", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    // Check if the user is the admin of the bracket
+    if (bracket.admin.toString() !== req.user.userId) {
+      return res.status(403).json({ message: "You are not authorized to stop this bracket" });
+    }
+
+    // Update bracket status
+    bracket.status = "stopped";
+    bracket.isOpen = false;
+    await bracket.save();
+
+    res.json({ message: "Bracket stopped successfully", bracketId: bracket._id });
+  } catch (error) {
+    console.error("Error stopping bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 const server = http.createServer(app);
 const io = new Server(server);
 
