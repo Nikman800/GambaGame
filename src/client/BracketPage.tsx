@@ -68,6 +68,13 @@ const BracketPage: React.FC = () => {
         setSpectatorCount(data.spectatorCount);
         setGamblerCount(data.gamblerCount);
       });
+
+      socket.on('bracketClosed', (data: { message: string; bracketId: string }) => {
+        if (data.bracketId === id) {
+          alert(data.message);
+          navigate('/'); // Redirect to home page or bracket list
+        }
+      });
     }
 
     return () => {

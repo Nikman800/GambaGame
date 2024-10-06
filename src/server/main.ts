@@ -29,10 +29,12 @@ app.use((req, res, next) => {
   next();
 });
 
+
 if (!process.env.MONGODB_URI) {
   console.error("MONGODB_URI environment variable is not defined");
   process.exit(1);
 }
+
 
 mongoose
   .connect(process.env.MONGODB_URI)
@@ -51,6 +53,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
+
 const User = mongoose.model("User", userSchema);
 
 const SECRET_KEY = process.env.JWT_SECRET || "RANDOM-TOKEN"; // Use environment variable for JWT secret
@@ -68,6 +71,7 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Username already exists" });
     }
 
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -78,6 +82,7 @@ app.post("/register", async (req, res) => {
       password: hashedPassword,
     });
 
+
     await newUser.save();
 
     res.status(201).json({ message: "User created successfully" });
@@ -86,6 +91,7 @@ app.post("/register", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.post("/login", async (req, res) => {
   try {
@@ -107,12 +113,14 @@ app.post("/login", async (req, res) => {
       expiresIn: "1h",
     });
 
+
     res.json({ token });
   } catch (error) {
     console.error("Error in /login:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // ViteExpress.listen(app, 3000, () => {
 //   console.log("Server is listening on port 3000...");
@@ -123,12 +131,15 @@ app.get("/free-endpoint", (req: express.Request, res: express.Response) => {
   res.json({ message: "You are free to access me anytime" });
 });
 
+
+
 app.get("/auth-endpoint", auth, (req: AuthenticatedRequest, res: Response) => {
   res.json({
     message: "You are authorized to access me",
     user: req.user, // Now TypeScript knows that req.user exists
   });
 });
+
 
 app.get(
   "/user-info",
@@ -174,6 +185,15 @@ const bracketSchema = new mongoose.Schema({
   isOpen: { type: Boolean, default: false },
   status: { type: String, default: "pending" }, // Add this line
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  currentMatch: {
+    player1: String,
+    player2: String,
+  },
+  bets: [{
+    gambler: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    player: { type: String, required: true },
+    amount: { type: Number, required: true }
+  }],
 });
 
 
@@ -267,6 +287,7 @@ app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
   }
 });
 
+
 app.put("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -304,6 +325,7 @@ app.put("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
   }
 });
 
+
 app.delete("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -322,6 +344,7 @@ app.delete("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.put("/brackets/:id/open", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -342,6 +365,7 @@ app.put("/brackets/:id/open", auth, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
+
 app.get("/brackets/:id/participants", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -358,6 +382,7 @@ app.get("/brackets/:id/participants", auth, async (req: AuthenticatedRequest, re
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -377,6 +402,8 @@ app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+
+
 app.get("/open-brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const openBrackets = await Bracket.find({ isOpen: true }).exec(); // Assuming isOpen is a field in your schema
@@ -386,6 +413,7 @@ app.get("/open-brackets", auth, async (req: AuthenticatedRequest, res: Response)
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -398,58 +426,53 @@ app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Resp
       return res.status(404).json({ message: "Bracket not found" });
     }
 
-    // Check if the user is already a spectator or gambler
-    if (bracket.spectators.some(spectator => spectator.toString() === req.user!.userId) ||
-        bracket.gamblers.some(gambler => gambler.user && gambler.user.toString() === req.user!.userId)) {
-      return res.status(400).json({ message: "You are already a spectator or gambler in this bracket" });
+    // Check if the user is the admin
+    if (bracket.admin.toString() === req.user.userId) {
+      return res.status(400).json({ message: "Admin cannot join their own bracket" });
     }
 
-    // Add the user to the spectators list
-    bracket.spectators.push(new mongoose.Types.ObjectId(req.user.userId));
+    // Check if the user is already a spectator or gambler
+    const isSpectator = bracket.spectators.some(spectator => spectator.toString() === req.user!.userId);
+    const isGambler = bracket.gamblers.some(gambler => gambler.user && gambler.user.toString() === req.user!.userId);
 
-    // Add the user to the gamblers list with starting points
-    bracket.gamblers.push({
-      user: new mongoose.Types.ObjectId(req.user.userId),
-      points: bracket.startingPoints
-    });
+    if (!isSpectator) {
+      // Add the user to the spectators list
+      bracket.spectators.push(new mongoose.Types.ObjectId(req.user.userId));
+    }
 
-    await bracket.save();
-    io.to(bracket._id.toString()).emit('bracketUpdated', {
-      spectatorCount: bracket.spectators.length,
-      gamblerCount: bracket.gamblers.length
-    });
+    if (!isGambler) {
+      // Add the user to the gamblers list with starting points
+      bracket.gamblers.push({
+        user: new mongoose.Types.ObjectId(req.user.userId),
+        points: bracket.startingPoints
+      });
+    }
 
-    res.json({ message: "Successfully joined the bracket as a spectator and gambler", bracketId: bracket._id });
+    if (!isSpectator || !isGambler) {
+      await bracket.save();
+      const updatedBracket = await Bracket.findById(bracket._id)
+        .populate('spectators', '_id username')
+        .populate('gamblers.user', '_id username');
+      
+      if (updatedBracket) {
+        io.to(bracket._id.toString()).emit('bracketUpdated', {
+          spectators: updatedBracket.spectators,
+          gamblers: updatedBracket.gamblers
+        });
+      } else {
+        console.error("Failed to fetch updated bracket");
+      }
+    }
+
+    res.json({ message: "Successfully joined the bracket", bracketId: bracket._id });
   } catch (error) {
     console.error("Error joining bracket:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.put("/brackets/:id/close", auth, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
 
-    const updatedBracket = await Bracket.findByIdAndUpdate(
-      req.params.id,
-      { $set: { isOpen: false, spectators: [] } },
-      { new: true }
-    );
-
-    if (!updatedBracket) {
-      return res.status(404).json({ message: "Bracket not found" });
-    }
-
-    res.json({ message: "Bracket closed successfully", bracketId: updatedBracket._id });
-  } catch (error) {
-    console.error("Error closing bracket:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.post("/brackets/:id/stop", auth, async (req: AuthenticatedRequest, res: Response) => {
+app.put("/brackets/:id/end", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "User not authenticated" });
@@ -462,20 +485,158 @@ app.post("/brackets/:id/stop", auth, async (req: AuthenticatedRequest, res: Resp
 
     // Check if the user is the admin of the bracket
     if (bracket.admin.toString() !== req.user.userId) {
-      return res.status(403).json({ message: "You are not authorized to stop this bracket" });
+      return res.status(403).json({ message: "You are not authorized to end this bracket" });
     }
 
     // Update bracket status
-    bracket.status = "stopped";
+    bracket.status = "ended";
     bracket.isOpen = false;
     await bracket.save();
 
-    res.json({ message: "Bracket stopped successfully", bracketId: bracket._id });
+    // Notify all clients that the bracket has ended
+    io.to(bracket._id.toString()).emit('bracketEnded', {
+      message: "The bracket has been ended by the admin",
+      bracketId: bracket._id
+    });
+
+    res.json({ message: "Bracket ended successfully", bracketId: bracket._id });
   } catch (error) {
-    console.error("Error stopping bracket:", error);
+    console.error("Error ending bracket:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+app.post("/brackets/:id/bet", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { player, amount } = req.body;
+    const bracket = await Bracket.findById(req.params.id);
+
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    const gambler = bracket.gamblers.find(g => g.user && g.user.toString() === req.user!.userId);
+
+    if (!gambler) {
+      return res.status(400).json({ message: "You are not a gambler in this bracket" });
+    }
+
+    if (gambler.points < amount) {
+      return res.status(400).json({ message: "Insufficient points" });
+    }
+
+    gambler.points -= amount;
+    bracket.bets.push({ gambler: req.user.userId, player, amount });
+
+    await bracket.save();
+
+    io.to(bracket._id.toString()).emit('betPlaced', {
+      gamblerId: req.user.userId,
+      player,
+      amount
+    });
+
+    res.json({ message: "Bet placed successfully" });
+  } catch (error) {
+    console.error("Error placing bet:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.get("/brackets/:id/bets", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const bracket = await Bracket.findById(req.params.id).populate('bets.gambler', 'username');
+
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    const totalBets = bracket.bets.reduce((acc, bet) => {
+      if (bet.player && bet.amount) {
+        acc[bet.player] = (acc[bet.player] || 0) + bet.amount;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const odds: Record<string, number> = {}
+    if (bracket.currentMatch && bracket.currentMatch.player1 && bracket.currentMatch.player2) {
+      const player1Bets = totalBets[bracket.currentMatch.player1] || 0;
+      const player2Bets = totalBets[bracket.currentMatch.player2] || 0;
+      odds[bracket.currentMatch.player1] = player2Bets / player1Bets + 1 || 1;
+      odds[bracket.currentMatch.player2] = player1Bets / player2Bets + 1 || 1;
+    }
+
+    res.json({ bets: bracket.bets, totalBets, odds });
+  } catch (error) {
+    console.error("Error fetching bets:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { winner } = req.body;
+    const bracket = await Bracket.findById(req.params.id);
+
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    // Distribute points
+    const totalBets = bracket.bets.reduce((acc, bet) => {
+      if (bet.player && bet.amount) {
+        acc[bet.player] = (acc[bet.player] || 0) + bet.amount;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const winningBets = bracket.bets.filter(bet => bet.player === winner);
+    const totalWinningBets = winningBets.reduce((sum, bet) => sum + (bet.amount || 0), 0);
+
+    winningBets.forEach(bet => {
+      if (bet.gambler && bet.amount) {
+        const gambler = bracket.gamblers.find(g => g.user && g.user.toString() === bet.gambler?.toString());
+        if (gambler && bracket.currentMatch) {
+          const losingPlayer = bracket.currentMatch.player1 === winner ? bracket.currentMatch.player2 : bracket.currentMatch.player1;
+          if (losingPlayer) {
+            const winnings = (bet.amount / totalWinningBets) * (totalBets[losingPlayer] || 0);
+            gambler.points += winnings + bet.amount;
+          }
+        }
+      }
+    });
+
+    // Clear bets and update current match
+    bracket.bets = [] as any;
+    // Logic to determine next match
+    // For simplicity, let's assume the next match is null (end of bracket)
+    bracket.currentMatch = null;
+
+    await bracket.save();
+
+    io.to(bracket._id.toString()).emit('matchEnded', {
+      winner,
+      nextMatch: bracket.currentMatch
+    });
+
+    res.json({ message: "Match result processed successfully" });
+  } catch (error) {
+    console.error("Error processing match result:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -508,15 +669,60 @@ io.on('connection', (socket) => {
   });
 });
 
-app.post("/brackets/:id/bet", auth, async (req: AuthenticatedRequest, res: Response) => {
-  // Handle betting logic
-});
-
-app.get("/brackets/:id/bets", auth, async (req: AuthenticatedRequest, res: Response) => {
-  // Return total bets for the current match
-});
 
 // Replace app.listen with server.listen
 server.listen(3001, () => {
   console.log('Server is running on port 3001');
+});
+
+app.get("/brackets/:id/admin-status", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    const isAdmin = bracket.admin.toString() === req.user.userId;
+    res.json({ isAdmin });
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/brackets/:id/simulate", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    // Check if the user is the admin of the bracket
+    if (bracket.admin.toString() !== req.user.userId) {
+      return res.status(403).json({ message: "You are not authorized to simulate this bracket" });
+    }
+
+    // Implement your bracket simulation logic here
+    // This is a placeholder for the actual simulation logic
+    bracket.status = "completed";
+    await bracket.save();
+
+    io.to(bracket._id.toString()).emit('bracketSimulated', {
+      message: "The bracket has been simulated",
+      bracketId: bracket._id
+    });
+
+    res.json({ message: "Bracket simulated successfully", bracketId: bracket._id });
+  } catch (error) {
+    console.error("Error simulating bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
