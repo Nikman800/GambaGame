@@ -158,6 +158,12 @@ const bracketSchema = new mongoose.Schema({
   type: { type: String, required: true },
   participants: [{ type: String }],
   spectators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  gamblers: [
+    {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      points: { type: Number, required: true }
+    }
+  ],
   startingPoints: { type: Number, required: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -233,7 +239,9 @@ app.get("/brackets", auth, async (req: AuthenticatedRequest, res: Response) => {
 // Add this route after the existing bracket-related routes
 app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const bracket = await Bracket.findById(req.params.id).populate('spectators', '_id username');
+    const bracket = await Bracket.findById(req.params.id)
+      .populate('spectators', '_id username')
+      .populate('gamblers.user', '_id username');
     if (!bracket) {
       return res.status(404).json({ message: "Bracket not found" });
     }
@@ -243,6 +251,11 @@ app.get("/brackets/:id", auth, async (req: AuthenticatedRequest, res: Response) 
         spectators: bracket.spectators.map((spectator: any) => ({
           _id: spectator._id,
           username: spectator.username
+        })),
+        gamblers: bracket.gamblers.map((gambler: any) => ({
+          _id: gambler.user._id,
+          username: gambler.user.username,
+          points: gambler.points
         })),
         admin: bracket.admin
       },
@@ -385,19 +398,28 @@ app.post("/brackets/:id/join", auth, async (req: AuthenticatedRequest, res: Resp
       return res.status(404).json({ message: "Bracket not found" });
     }
 
-    console.log('User:', req.user);
-    console.log('Bracket spectators:', bracket.spectators);
-
-    // Check if the user is already a spectator
-    if (bracket.spectators.some(spectator => spectator.toString() === req.user!.userId)) {
-      return res.status(400).json({ message: "You are already a spectator in this bracket" });
+    // Check if the user is already a spectator or gambler
+    if (bracket.spectators.some(spectator => spectator.toString() === req.user!.userId) ||
+        bracket.gamblers.some(gambler => gambler.user && gambler.user.toString() === req.user!.userId)) {
+      return res.status(400).json({ message: "You are already a spectator or gambler in this bracket" });
     }
 
     // Add the user to the spectators list
     bracket.spectators.push(new mongoose.Types.ObjectId(req.user.userId));
-    await bracket.save();
 
-    res.json({ message: "Successfully joined the bracket as a spectator", bracketId: bracket._id });
+    // Add the user to the gamblers list with starting points
+    bracket.gamblers.push({
+      user: new mongoose.Types.ObjectId(req.user.userId),
+      points: bracket.startingPoints
+    });
+
+    await bracket.save();
+    io.to(bracket._id.toString()).emit('bracketUpdated', {
+      spectatorCount: bracket.spectators.length,
+      gamblerCount: bracket.gamblers.length
+    });
+
+    res.json({ message: "Successfully joined the bracket as a spectator and gambler", bracketId: bracket._id });
   } catch (error) {
     console.error("Error joining bracket:", error);
     res.status(500).json({ message: "Server error" });
@@ -471,6 +493,14 @@ io.on('connection', (socket) => {
 
   socket.on('matchResult', (data) => {
     io.emit('matchEnded', data);
+  });
+
+  socket.on('joinBracket', (bracketId) => {
+    socket.join(bracketId);
+  });
+
+  socket.on('leaveBracket', (bracketId) => {
+    socket.leave(bracketId);
   });
 
   socket.on('disconnect', () => {

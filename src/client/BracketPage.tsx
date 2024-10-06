@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import BracketTree from './BracketTree';
+import io from 'socket.io-client';
 
 interface Bracket {
   _id: string;
@@ -13,7 +14,8 @@ interface Bracket {
   participants: string[];
   runs: number;
   startingPoints: number;
-  spectators: string[];
+  spectators: Array<{ _id: string, username: string }>;
+  gamblers: Array<{ _id: string, username: string, points: number }>;
   isOpen: boolean;
 }
 
@@ -22,8 +24,12 @@ const BracketPage: React.FC = () => {
   const [bracket, setBracket] = useState<Bracket | null>(null);
   const [admin, setAdmin] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [spectatorCount, setSpectatorCount] = useState(0);
+  const [gamblerCount, setGamblerCount] = useState(0);
 
   useEffect(() => {
+    const socket = io();
+
     const fetchBracket = async () => {
       try {
         const token = Cookies.get('TOKEN');
@@ -38,6 +44,8 @@ const BracketPage: React.FC = () => {
         });
         setBracket(response.data.bracket);
         setAdmin(response.data.bracket.admin);
+        setSpectatorCount(response.data.bracket.spectators.length);
+        setGamblerCount(response.data.bracket.gamblers.length);
         
         // Decode the token to get the user ID
         try {
@@ -52,6 +60,22 @@ const BracketPage: React.FC = () => {
     };
 
     fetchBracket();
+
+    if (id) {
+      socket.emit('joinBracket', id);
+
+      socket.on('bracketUpdated', (data: { spectatorCount: number; gamblerCount: number }) => {
+        setSpectatorCount(data.spectatorCount);
+        setGamblerCount(data.gamblerCount);
+      });
+    }
+
+    return () => {
+      if (id) {
+        socket.emit('leaveBracket', id);
+      }
+      socket.disconnect();
+    };
   }, [id]);
 
   const handleEdit = () => {
@@ -104,7 +128,16 @@ const BracketPage: React.FC = () => {
       <p>Runs: {bracket.runs}</p>
       <p>Starting Points for Spectators: {bracket.startingPoints}</p>
       {bracket.isOpen && (
-        <p>Spectators: {bracket.spectators ? bracket.spectators.length : 0}</p>
+        <>
+          <p>Spectators: {bracket.spectators.length}</p>
+          <p>Total Participants: {bracket.gamblers.length}</p>
+          <h3>Spectators:</h3>
+          <ul>
+            {bracket.spectators.map(spectator => (
+              <li key={spectator._id}>{spectator.username}</li>
+            ))}
+          </ul>
+        </>
       )}
       <p>Status: {bracket.isOpen ? 'Active' : 'Closed'}</p>
       {(() => {
