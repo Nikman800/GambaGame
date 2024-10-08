@@ -197,7 +197,7 @@ const bracketSchema = new mongoose.Schema({
     }
   ],
   bettingPhase: { type: Boolean, default: true },
-  matchResults: [{ round: Number, match: Number, winner: String }],
+  matchResults: { type: [{ round: Number, match: Number, winner: String }], default: [] },
   currentRound: { type: Number, default: 1 },
   currentMatchNumber: { type: Number, default: 0 }
 });
@@ -225,16 +225,13 @@ app.post(
           .map((p: string) => p.trim())
           .filter((p: string) => p),
         startingPoints: Number(startingPoints),
-        createdBy: req.user.userId, // Safe to access req.user.userId here
+        createdBy: req.user.userId,
         admin: req.user.userId,
         matchResults: [],
         currentRound: 1,
         currentMatchNumber: 0,
+        status: "created"
       });
-
-      const { currentMatch, isCompleted } = manageBracketRounds(newBracket);
-      newBracket.currentMatch = currentMatch;
-      newBracket.status = isCompleted ? "completed" : "created";
 
       await newBracket.save();
 
@@ -431,11 +428,16 @@ app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Res
       return res.status(404).json({ message: "Bracket not found" });
     }
 
-    // Set up the first match
-    const [player1, player2] = bracket.participants.slice(0, 2);
-    bracket.currentMatch = { player1, player2 };
+    // Reset bracket state
+    bracket.matchResults.splice(0, bracket.matchResults.length);
+    bracket.currentRound = 1;
+    bracket.currentMatchNumber = 0;
     bracket.status = "started";
     bracket.bettingPhase = true;
+
+    const { currentMatch, isCompleted } = manageBracketRounds(bracket);
+    bracket.currentMatch = currentMatch;
+
     await bracket.save();
 
     io.to(bracket._id.toString()).emit('bracketStarted', {
