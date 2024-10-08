@@ -87,9 +87,6 @@ const BettingPhase: React.FC<BettingPhaseProps> = ({ match, onStartMatch, id, is
           <Button type="submit">Place Bet</Button>
         </Form>
       )}
-      {isAdmin && (
-        <Button onClick={onStartMatch}>Start Match</Button>
-      )}
       <h3>Current Bets</h3>
       <ul>
         {bets.map((bet, index) => (
