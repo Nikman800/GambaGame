@@ -23,12 +23,12 @@ const authMiddleware = async (req: AuthenticatedRequest, res: Response, next: Ne
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('Token:', token); // Log the token
-    console.log('Secret Key:', SECRET_KEY); // Log the secret key
+    // console.log('Token:', token); // Log the token
+    // console.log('Secret Key:', SECRET_KEY); // Log the secret key
 
     // Check if the token matches the supposed origin
     const decodedToken = jwt.verify(token, SECRET_KEY) as DecodedToken;
-    console.log('Decoded Token:', decodedToken); // Log the decoded token
+    // console.log('Decoded Token:', decodedToken); // Log the decoded token
 
     // Pass the user down to the endpoints here
     req.user = decodedToken;

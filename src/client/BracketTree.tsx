@@ -4,15 +4,17 @@ import './BracketTree.css';
 
 interface BracketTreeProps {
   participants: string[];
+  currentRound: number;
+  matchResults: { [key: string]: string };
 }
 
-const BracketTree: React.FC<BracketTreeProps> = ({ participants }) => {
+const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, matchResults }) => {
   const rounds = Math.ceil(Math.log2(participants.length));
 
   const generateBracket = (participants: string[]): string[][] => {
     const bracket: string[][] = [];
     let currentRound = [...participants];
-
+    
     while (currentRound.length > 1) {
       bracket.push(currentRound);
       const nextRound: string[] = [];
@@ -33,11 +35,14 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants }) => {
   const bracket = generateBracket(participants);
 
   const renderMatch = (player1: string, player2: string | undefined, roundIndex: number, matchIndex: number) => {
+    const matchId = `${roundIndex}-${matchIndex}`;
+    const winner = matchResults[matchId];
+
     return (
-      <div key={`match-${roundIndex}-${matchIndex}`} className="match">
+      <div key={`match-${matchId}`} className="match">
         <div className="match-wrapper">
-          <div className="participant">{player1}</div>
-          {player2 && <div className="participant">{player2}</div>}
+          <div className={`participant ${winner === player1 ? 'winner' : ''}`}>{player1}</div>
+          {player2 && <div className={`participant ${winner === player2 ? 'winner' : ''}`}>{player2}</div>}
         </div>
       </div>
     );
@@ -47,19 +52,23 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants }) => {
     return (
       <div key={`round-${roundIndex}`} className={`round round-${roundIndex + 1}`}>
         <div className="matches-container">
-          {Array.from({ length: Math.ceil(roundParticipants.length / 2) }, (_, i) =>
-            renderMatch(roundParticipants[i * 2], roundParticipants[i * 2 + 1], roundIndex, i)
-          )}
+          {Array.from({ length: Math.ceil(roundParticipants.length / 2) }, (_, i) => {
+            const player1 = roundParticipants[i * 2];
+            const player2 = roundParticipants[i * 2 + 1];
+            if (roundIndex < currentRound && matchResults[`${roundIndex}-${i}`]) {
+              const winner = matchResults[`${roundIndex}-${i}`];
+              return renderMatch(winner, undefined, roundIndex, i);
+            }
+            return renderMatch(player1, player2, roundIndex, i);
+          })}
         </div>
       </div>
     );
   };
 
   return (
-    <Container>
-      <div className="bracket-tree">
-        {bracket.map((roundParticipants, index) => renderRound(roundParticipants, index))}
-      </div>
+    <Container className="bracket-tree">
+      {bracket.map((roundParticipants, index) => renderRound(roundParticipants, index))}
       {bracket[bracket.length - 1][0] !== 'TBD' && (
         <div className="winner-tag">Winner: {bracket[bracket.length - 1][0]}</div>
       )}

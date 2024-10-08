@@ -31,6 +31,7 @@ const BracketPrep: React.FC = () => {
   const [bracketStarted, setBracketStarted] = useState(false);
   const [bets, setBets] = useState<any[]>([]);
   const [gamblerCount, setGamblerCount] = useState(0);
+  const [matchResults, setMatchResults] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const newSocket = io('/');
@@ -180,6 +181,10 @@ const BracketPrep: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+      setMatchResults(prevResults => ({
+        ...prevResults,
+        [`${currentRound - 1}-${Math.floor((participants.indexOf(winner)) / 2)}`]: winner
+      }));
     } catch (error) {
       console.error('Error submitting match result:', error);
     }
@@ -210,7 +215,7 @@ const BracketPrep: React.FC = () => {
           )}
         </div>
       )}
-      <BracketTree participants={participants} />
+      <BracketTree participants={participants} currentRound={currentRound} matchResults={matchResults} />
       <h3>Spectators ({spectators.length}):</h3>
       <ul>
         {spectators.map(spectator => (

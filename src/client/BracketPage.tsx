@@ -26,6 +26,8 @@ const BracketPage: React.FC = () => {
   const navigate = useNavigate();
   const [spectatorCount, setSpectatorCount] = useState(0);
   const [gamblerCount, setGamblerCount] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [matchResults, setMatchResults] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const socket = io();
@@ -175,7 +177,7 @@ const BracketPage: React.FC = () => {
           </>
         );
       })()}
-      <BracketTree participants={bracket.participants} />
+      <BracketTree participants={bracket.participants} currentRound={currentRound} matchResults={matchResults} />
     </Container>
   );
 };
