@@ -386,24 +386,19 @@ app.get("/brackets/:id/participants", auth, async (req: AuthenticatedRequest, re
   }
 });
 
-function determineNextMatch(bracket: any): { player1: string, player2: string } | null {
-  const remainingParticipants = bracket.participants.filter((participant: string) => {
-    return !bracket.currentMatch || (participant !== bracket.currentMatch.player1 && participant !== bracket.currentMatch.player2);
-  });
+function determineNextMatch(bracket: any, winner: string): { player1: string, player2: string } | null {
+  // Remove the loser from the participants list
+  bracket.participants = bracket.participants.filter((p: string) => p !== (bracket.currentMatch.player1 === winner ? bracket.currentMatch.player2 : bracket.currentMatch.player1));
 
-  if (remainingParticipants.length >= 2) {
+  const remainingParticipants = bracket.participants.filter((participant: string) => participant !== winner);
+
+  if (remainingParticipants.length >= 1) {
     return {
-      player1: remainingParticipants[0],
-      player2: remainingParticipants[1]
-    };
-  } else if (remainingParticipants.length === 1 && bracket.currentMatch) {
-    // Final match
-    return {
-      player1: bracket.currentMatch.player1,
+      player1: winner,
       player2: remainingParticipants[0]
     };
   } else {
-    // Tournament is over
+    // Tournament is over, winner is the champion
     return null;
   }
 }
@@ -531,6 +526,7 @@ app.put("/brackets/:id/end", auth, async (req: AuthenticatedRequest, res: Respon
       gambler.points = bracket.startingPoints;
     });
     bracket.bettingPhase = false;
+    bracket.isOpen = false;
     await bracket.save();
 
     io.to(bracket._id.toString()).emit('bracketEnded', {
@@ -659,12 +655,7 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
     // Clear bets and update current match
     bracket.bets = [] as any;
     // Logic to determine next match
-    // For simplicity, let's assume the next match is null (end of bracket)
-    bracket.currentMatch = null;
-
-    await bracket.save();
-
-    const nextMatch = determineNextMatch(bracket);
+    const nextMatch = determineNextMatch(bracket, winner);
     bracket.currentMatch = nextMatch;
     bracket.bettingPhase = nextMatch !== null;
     await bracket.save();
@@ -675,7 +666,7 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
       bettingPhase: bracket.bettingPhase
     });
 
-    res.json({ message: "Match result processed successfully" });
+    res.json({ message: "Match result processed successfully", nextMatch });
   } catch (error) {
     console.error("Error processing match result:", error);
     res.status(500).json({ message: "Server error" });
