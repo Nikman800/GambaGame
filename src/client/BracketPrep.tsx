@@ -11,10 +11,13 @@ import io from 'socket.io-client';
 interface BracketStartedData {
   bracketId: string;
   match: { player1: string; player2: string };
+  bracketName: string;
+  currentRound: number;
 }
 
 const BracketPrep: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [bracketName, setBracketName] = useState('');
   const [participants, setParticipants] = useState<string[]>([]);
   const [spectators, setSpectators] = useState<Array<{ _id: string, username: string }>>([]);
   const [admin, setAdmin] = useState<string | null>(null);
@@ -34,9 +37,12 @@ const BracketPrep: React.FC = () => {
     setSocket(newSocket);
 
     newSocket.on('bracketStarted', (data: BracketStartedData) => {
+      console.log('Bracket started:', data);
       setBracketStarted(true);
       setCurrentMatch(data.match);
       setBettingPhase(true);
+      setBracketName(data.bracketName);
+      setCurrentRound(data.currentRound);
     });
 
     newSocket.on('matchStarted', () => {
@@ -49,6 +55,7 @@ const BracketPrep: React.FC = () => {
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(true);
+        setCurrentRound(prevRound => prevRound + 1);
       } else {
         setBracketStarted(false);
       }
@@ -57,6 +64,17 @@ const BracketPrep: React.FC = () => {
     newSocket.on('bracketUpdated', (data: { spectators: Array<{ _id: string, username: string }>, gamblerCount: number }) => {
       setSpectators(data.spectators);
       setGamblerCount(data.gamblerCount);
+    });
+
+    newSocket.on('bracketEnded', (data: { message: string, bracketId: string }) => {
+      setBracketStarted(false);
+      setCurrentMatch(null);
+      setBets([]);
+      setGamblerCount(0);
+      setBettingPhase(false);
+      setMatchInProgress(false);
+      setCurrentRound(1);
+      navigate(`/bracket/${data.bracketId}`);
     });
 
     return () => {
@@ -73,6 +91,7 @@ const BracketPrep: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
         });
+        setBracketName(response.data.bracket.name);
         setParticipants(response.data.participants);
         setSpectators(response.data.bracket.spectators);
         setAdmin(response.data.bracket.admin);
@@ -106,6 +125,12 @@ const BracketPrep: React.FC = () => {
     fetchAdminStatus();
   }, [id]);
 
+  useEffect(() => {
+    if (socket && id) {
+      socket.emit('joinBracket', id);
+    }
+  }, [socket, id]);
+
   const handleStartBracket = async () => {
     try {
       const token = Cookies.get('TOKEN');
@@ -114,23 +139,9 @@ const BracketPrep: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setBracketStarted(true);
-      socket.emit('startBracket', { bracketId: id });
+      console.log('Bracket start request sent');
     } catch (error) {
       console.error('Error starting bracket:', error);
-    }
-  };
-
-  const handleSimulateBracket = async () => {
-    try {
-      const token = Cookies.get('TOKEN');
-      await axios.post(`/api/brackets/${id}/simulate`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-    } catch (error) {
-      console.error('Error simulating bracket:', error);
     }
   };
 
@@ -142,8 +153,7 @@ const BracketPrep: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setBracketStarted(false);
-      navigate(`/bracket/${id}`);
+      // The state will be updated by the 'bracketEnded' socket event
     } catch (error) {
       console.error('Error ending bracket:', error);
     }
@@ -177,15 +187,28 @@ const BracketPrep: React.FC = () => {
 
   return (
     <Container>
-      <h1>Bracket Preparation</h1>
+      <h1>{bracketName}</h1>
       {isAdmin && !bracketStarted && (
         <Button onClick={handleStartBracket}>Start Bracket</Button>
       )}
       {isAdmin && bracketStarted && (
-        <>
-          <Button onClick={handleSimulateBracket}>Simulate Bracket</Button>
-          <Button onClick={handleEndBracket}>End Bracket</Button>
-        </>
+        <Button onClick={handleEndBracket}>End Bracket</Button>
+      )}
+      {bracketStarted && currentMatch && (
+        <div>
+          <h2>Round {currentRound}</h2>
+          <p>{currentMatch.player1} vs {currentMatch.player2}</p>
+          {bettingPhase ? (
+            <div>
+              <h3>Betting Phase</h3>
+              {isAdmin && (
+                <Button onClick={handleStartMatch}>Start Game Phase</Button>
+              )}
+            </div>
+          ) : (
+            <h3>Game Phase</h3>
+          )}
+        </div>
       )}
       <BracketTree participants={participants} />
       <h3>Spectators ({spectators.length}):</h3>

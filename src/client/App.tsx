@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Route, Routes, Link } from "react-router-dom";
+import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import { Container, Navbar, Nav, Button, Offcanvas } from "react-bootstrap";
 import { FaUserCircle } from "react-icons/fa";
 import Cookies from "js-cookie";
@@ -29,11 +29,14 @@ function App() {
     setUsername(storedUsername || "");
   }, []);
 
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     Cookies.remove("TOKEN", { path: "/" });
     Cookies.remove("USERNAME", { path: "/" });
     setIsLoggedIn(false);
     setUsername("");
+    navigate('/');
   };
 
   return (

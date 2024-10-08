@@ -189,11 +189,14 @@ const bracketSchema = new mongoose.Schema({
     player1: String,
     player2: String,
   },
-  bets: [{
-    gambler: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    player: { type: String, required: true },
-    amount: { type: Number, required: true }
-  }],
+  bets: [
+    {
+      gambler: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      player: { type: String, required: true },
+      amount: { type: Number, required: true }
+    }
+  ],
+  bettingPhase: { type: Boolean, default: true },
 });
 
 
@@ -383,6 +386,27 @@ app.get("/brackets/:id/participants", auth, async (req: AuthenticatedRequest, re
   }
 });
 
+function determineNextMatch(bracket: any): { player1: string, player2: string } | null {
+  const remainingParticipants = bracket.participants.filter((participant: string) => {
+    return !bracket.currentMatch || (participant !== bracket.currentMatch.player1 && participant !== bracket.currentMatch.player2);
+  });
+
+  if (remainingParticipants.length >= 2) {
+    return {
+      player1: remainingParticipants[0],
+      player2: remainingParticipants[1]
+    };
+  } else if (remainingParticipants.length === 1 && bracket.currentMatch) {
+    // Final match
+    return {
+      player1: bracket.currentMatch.player1,
+      player2: remainingParticipants[0]
+    };
+  } else {
+    // Tournament is over
+    return null;
+  }
+}
 
 app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -391,9 +415,20 @@ app.post("/brackets/:id/start", auth, async (req: AuthenticatedRequest, res: Res
       return res.status(404).json({ message: "Bracket not found" });
     }
 
-    // Logic to start the bracket (e.g., setting a status, notifying participants)
-    bracket.status = "started"; // Assuming you have a status field
+    // Set up the first match
+    const [player1, player2] = bracket.participants.slice(0, 2);
+    bracket.currentMatch = { player1, player2 };
+    bracket.status = "started";
+    bracket.bettingPhase = true;
     await bracket.save();
+
+    io.to(bracket._id.toString()).emit('bracketStarted', {
+      bracketId: bracket._id,
+      match: bracket.currentMatch,
+      bettingPhase: true,
+      bracketName: bracket.name,
+      currentRound: 1
+    });
 
     res.json({ message: "Bracket started successfully", bracketId: bracket._id });
   } catch (error) {
@@ -488,14 +523,18 @@ app.put("/brackets/:id/end", auth, async (req: AuthenticatedRequest, res: Respon
       return res.status(403).json({ message: "You are not authorized to end this bracket" });
     }
 
-    // Update bracket status
-    bracket.status = "ended";
-    bracket.isOpen = false;
+    // Reset pertinent data
+    bracket.status = "completed";
+    bracket.currentMatch = null;
+    bracket.$set('bets', []);
+    bracket.gamblers.forEach(gambler => {
+      gambler.points = bracket.startingPoints;
+    });
+    bracket.bettingPhase = false;
     await bracket.save();
 
-    // Notify all clients that the bracket has ended
     io.to(bracket._id.toString()).emit('bracketEnded', {
-      message: "The bracket has been ended by the admin",
+      message: "The bracket has ended",
       bracketId: bracket._id
     });
 
@@ -625,9 +664,15 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
 
     await bracket.save();
 
+    const nextMatch = determineNextMatch(bracket);
+    bracket.currentMatch = nextMatch;
+    bracket.bettingPhase = nextMatch !== null;
+    await bracket.save();
+
     io.to(bracket._id.toString()).emit('matchEnded', {
       winner,
-      nextMatch: bracket.currentMatch
+      nextMatch: bracket.currentMatch,
+      bettingPhase: bracket.bettingPhase
     });
 
     res.json({ message: "Match result processed successfully" });
@@ -723,6 +768,28 @@ app.post("/brackets/:id/simulate", auth, async (req: AuthenticatedRequest, res: 
     res.json({ message: "Bracket simulated successfully", bracketId: bracket._id });
   } catch (error) {
     console.error("Error simulating bracket:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/brackets/:id/start-match", auth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const bracket = await Bracket.findById(req.params.id);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    bracket.bettingPhase = false;
+    await bracket.save();
+
+    io.to(bracket._id.toString()).emit('matchStarted', {
+      bracketId: bracket._id,
+      match: bracket.currentMatch
+    });
+
+    res.json({ message: "Match started successfully", bracketId: bracket._id });
+  } catch (error) {
+    console.error("Error starting match:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
