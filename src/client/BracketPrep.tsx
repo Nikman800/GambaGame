@@ -51,12 +51,20 @@ const BracketPrep: React.FC = () => {
       setMatchInProgress(true);
     });
 
-    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null }) => {
+    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number }) => {
+      console.log('Match ended event received:', data);
       setMatchInProgress(false);
+      setMatchResults(prevResults => {
+        const matchIndex = Math.floor((data.currentMatchNumber - 1) / 2);
+        return {
+          ...prevResults,
+          [`${data.currentRound - 1}-${matchIndex}`]: data.winner
+        };
+      });
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(true);
-        setCurrentRound(prevRound => prevRound + 1);
+        setCurrentRound(data.currentRound);
       } else {
         setBracketStarted(false);
       }
@@ -181,10 +189,16 @@ const BracketPrep: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setMatchResults(prevResults => ({
-        ...prevResults,
-        [`${currentRound - 1}-${Math.floor((participants.indexOf(winner)) / 2)}`]: winner
-      }));
+      console.log('Match result submitted:', winner);
+      setMatchResults(prevResults => {
+        const matchIndex = currentMatch ? Math.floor((participants.indexOf(currentMatch.player1) % (participants.length / Math.pow(2, currentRound - 1))) / 2) : 0;
+        const newResults = {
+          ...prevResults,
+          [`${currentRound - 1}-${matchIndex}`]: winner
+        };
+        console.log('Updated matchResults:', newResults);
+        return newResults;
+      });
     } catch (error) {
       console.error('Error submitting match result:', error);
     }
@@ -215,6 +229,10 @@ const BracketPrep: React.FC = () => {
           )}
         </div>
       )}
+      {(() => {
+        console.log('Rendering BracketTree with:', { participants, currentRound, matchResults });
+        return null;
+      })()}
       <BracketTree participants={participants} currentRound={currentRound} matchResults={matchResults} />
       <h3>Spectators ({spectators.length}):</h3>
       <ul>
