@@ -157,6 +157,7 @@ const bracketSchema = new mongoose.Schema({
   description: { type: String },
   type: { type: String, required: true },
   participants: [{ type: String }],
+  originalParticipants: [{ type: String }], // Add this line
   spectators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   gamblers: [
     {
@@ -208,14 +209,17 @@ app.post(
       const { name, description, type, participants, startingPoints } =
         req.body;
 
+      const participantsList = participants
+        .split("\n")
+        .map((p: string) => p.trim())
+        .filter((p: string) => p);
+
       const newBracket = new Bracket({
         name,
         description,
         type,
-        participants: participants
-          .split("\n")
-          .map((p: string) => p.trim())
-          .filter((p: string) => p),
+        participants: participantsList,
+        originalParticipants: participantsList,
         startingPoints: Number(startingPoints),
         createdBy: req.user.userId,
         admin: req.user.userId,
@@ -407,11 +411,18 @@ app.get(
 
 function manageBracketRounds(bracket: any): { currentMatch: { player1: string, player2: string } | null, isCompleted: boolean } {
   console.log('Managing bracket rounds...');
+  
+  // If it's the first round, reset participants to originalParticipants
+  if (bracket.currentRound === 1 && bracket.currentMatchNumber === 0) {
+    bracket.participants = [...bracket.originalParticipants];
+  }
+
   console.log('Current participants:', bracket.participants);
   console.log('Current match results:', bracket.matchResults);
 
   const currentRoundWinners: string[] = [];
-  const matchesPerRound = Math.floor(bracket.participants.length / Math.pow(2, bracket.currentRound - 1));
+  const matchesPerRound = Math.floor(bracket.participants.length / Math.pow(2, bracket.currentRound - 1) / 2);
+  console.log('Matches per round:', matchesPerRound);
 
   // Process current round results
   bracket.matchResults.forEach((result: { round: number, winner: string }) => {
@@ -421,6 +432,13 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
   });
 
   console.log('Current round winners:', currentRoundWinners);
+
+  // Check if the tournament is completed
+  const totalRounds = Math.ceil(Math.log2(bracket.originalParticipants.length));
+  if (bracket.currentRound === totalRounds && currentRoundWinners.length === 1) {
+    console.log('Tournament completed. Winner:', currentRoundWinners[0]);
+    return { currentMatch: null, isCompleted: true };
+  }
 
   // Check if we need to move to the next round
   if (currentRoundWinners.length === matchesPerRound) {
@@ -442,9 +460,6 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
     console.log('Next match:', currentMatch);
     bracket.currentMatchNumber++;
     return { currentMatch, isCompleted: false };
-  } else if (remainingParticipants.length === 1) {
-    console.log('Tournament completed. Winner:', remainingParticipants[0]);
-    return { currentMatch: null, isCompleted: true };
   } else {
     console.log('No more matches to play');
     return { currentMatch: null, isCompleted: true };
@@ -467,6 +482,7 @@ app.post(
       bracket.currentMatchNumber = 0;
       bracket.status = "started";
       bracket.bettingPhase = true;
+      bracket.participants = [...bracket.originalParticipants]; // Reset participants
 
       const { currentMatch, isCompleted } = manageBracketRounds(bracket);
       bracket.currentMatch = currentMatch;
@@ -606,6 +622,7 @@ app.put(
       });
       bracket.bettingPhase = false;
       bracket.isOpen = false;
+      bracket.participants = [...bracket.originalParticipants]; // Reset participants to original list
       await bracket.save();
 
       io.to(bracket._id.toString()).emit("bracketEnded", {

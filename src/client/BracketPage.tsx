@@ -136,10 +136,16 @@ const BracketPage: React.FC = () => {
       <p>Type: {bracket.type}</p>
       <p>Runs: {bracket.runs}</p>
       <p>Starting Points for Spectators: {bracket.startingPoints}</p>
+      <p>Total Participants: {bracket.participants.length}</p>
+      <h3>Participants:</h3>
+      <ul>
+        {bracket.participants.map((participant, index) => (
+          <li key={index}>{participant}</li>
+        ))}
+      </ul>
       {bracket.isOpen && (
         <>
           <p>Spectators: {bracket.spectators.length}</p>
-          <p>Total Participants: {bracket.gamblers.length}</p>
           <h3>Spectators:</h3>
           <ul>
             {bracket.spectators.map(spectator => (
