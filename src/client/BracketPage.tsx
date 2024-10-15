@@ -77,6 +77,15 @@ const BracketPage: React.FC = () => {
           navigate('/'); // Redirect to home page or bracket list
         }
       });
+
+      socket.on('bracketEnded', (data: { message: string; bracketId: string; participants: string[] }) => {
+        if (data.bracketId === id) {
+          alert(data.message);
+          setBracket(prevBracket => prevBracket ? {...prevBracket, participants: data.participants, isOpen: false} : null);
+          setCurrentRound(1);
+          setMatchResults({});
+        }
+      });
     }
 
     return () => {

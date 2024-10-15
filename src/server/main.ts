@@ -537,7 +537,7 @@ app.post(
       }
 
       // Check if the user is the admin
-      if (bracket.admin.toString() === req.user.userId) {
+      if (bracket.admin.toString() === req.user!.userId) {
         return res
           .status(400)
           .json({ message: "Admin cannot join their own bracket" });
@@ -623,16 +623,21 @@ app.put(
       bracket.bettingPhase = false;
       bracket.isOpen = false;
       bracket.participants = [...bracket.originalParticipants]; // Reset participants to original list
+      bracket.currentRound = 1;
+      bracket.currentMatchNumber = 0;
+      bracket.$set('matchResults', []);
       await bracket.save();
 
       io.to(bracket._id.toString()).emit("bracketEnded", {
         message: "The bracket has ended",
         bracketId: bracket._id,
+        participants: bracket.participants,
       });
 
       res.json({
         message: "Bracket ended successfully",
         bracketId: bracket._id,
+        participants: bracket.participants,
       });
     } catch (error) {
       console.error("Error ending bracket:", error);

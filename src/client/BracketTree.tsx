@@ -11,28 +11,33 @@ interface BracketTreeProps {
 const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, matchResults }) => {
   const rounds = Math.ceil(Math.log2(participants.length));
 
-  const generateBracket = (participants: string[]): string[][] => {
-    const bracket: string[][] = [];
-    let currentRound = [...participants];
+  const generateBracket = (): string[][] => {
+    const bracket: string[][] = [participants];
     
-    while (currentRound.length > 1) {
-      bracket.push(currentRound);
-      const nextRound: string[] = [];
-      for (let i = 0; i < currentRound.length; i += 2) {
-        if (i + 1 < currentRound.length) {
-          nextRound.push('TBD');
+    for (let round = 1; round < rounds; round++) {
+      const previousRound = bracket[round - 1];
+      const currentRound: string[] = [];
+      
+      for (let i = 0; i < previousRound.length; i += 2) {
+        const matchId = `${round - 1}-${i / 2}`;
+        const winner = matchResults[matchId];
+        
+        if (winner) {
+          currentRound.push(winner);
+        } else if (i + 1 < previousRound.length) {
+          currentRound.push('TBD');
         } else {
-          nextRound.push(currentRound[i]);
+          currentRound.push(previousRound[i]);
         }
       }
-      currentRound = nextRound;
+      
+      bracket.push(currentRound);
     }
-    bracket.push(currentRound); // Final round
 
     return bracket;
   };
 
-  const bracket = generateBracket(participants);
+  const bracket = generateBracket();
 
   const renderMatch = (player1: string, player2: string | undefined, roundIndex: number, matchIndex: number) => {
     const matchId = `${roundIndex}-${matchIndex}`;
@@ -55,10 +60,6 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
           {Array.from({ length: Math.ceil(roundParticipants.length / 2) }, (_, i) => {
             const player1 = roundParticipants[i * 2];
             const player2 = roundParticipants[i * 2 + 1];
-            if (roundIndex < currentRound && matchResults[`${roundIndex}-${i}`]) {
-              const winner = matchResults[`${roundIndex}-${i}`];
-              return renderMatch(winner, undefined, roundIndex, i);
-            }
             return renderMatch(player1, player2, roundIndex, i);
           })}
         </div>
