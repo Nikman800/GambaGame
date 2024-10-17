@@ -51,7 +51,7 @@ const BracketPrep: React.FC = () => {
       setMatchInProgress(true);
     });
 
-    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number }) => {
+    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number, bettingPhase: boolean }) => {
       console.log('Match ended event received:', data);
       setMatchInProgress(false);
       setMatchResults(prevResults => {
@@ -63,8 +63,9 @@ const BracketPrep: React.FC = () => {
       });
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
-        setBettingPhase(true);
+        setBettingPhase(data.bettingPhase);
         setCurrentRound(data.currentRound);
+        setMatchInProgress(true);  // Set this to true for the next match
       } else {
         setBracketStarted(false);
       }
@@ -75,7 +76,8 @@ const BracketPrep: React.FC = () => {
       setGamblerCount(data.gamblerCount);
     });
 
-    newSocket.on('bracketEnded', (data: { message: string, bracketId: string }) => {
+    newSocket.on('bracketEnded', (data: { message: string, bracketId: string, finalResults: any }) => {
+      console.log('Bracket ended event received:', data);
       setBracketStarted(false);
       setCurrentMatch(null);
       setBets([]);
@@ -83,7 +85,8 @@ const BracketPrep: React.FC = () => {
       setBettingPhase(false);
       setMatchInProgress(false);
       setCurrentRound(1);
-      navigate(`/bracket/${data.bracketId}`);
+      setMatchResults(data.finalResults.finalBracket.matchResults);
+      navigate(`/bracket/${data.bracketId}/final-results`);
     });
 
     return () => {

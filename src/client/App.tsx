@@ -17,6 +17,7 @@ import axios from "axios";
 import EditBracketPage from "./EditBracketPage.js";
 import JoinBracket from './JoinBracket'; // Adjust the import path as necessary
 import BracketPrep from './BracketPrep'; // Import BracketPrep
+import BracketResults from './BracketResults';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -98,6 +99,7 @@ function App() {
           />
           <Route path="/join-bracket" element={<JoinBracket />} />
           <Route path="/bracket-prep/:id" element={<BracketPrep />} /> {/* Add this line */}
+          <Route path="/bracket/:id/final-results" element={<BracketResults />} />
         </Routes>
       </Container>
     </div>

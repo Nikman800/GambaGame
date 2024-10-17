@@ -1,0 +1,96 @@
+import React, { useEffect, useState } from 'react';
+import { Container, Table } from 'react-bootstrap';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import BracketTree from './BracketTree';
+
+interface BracketResult {
+  bracketWinner: string;
+  spectatorResults: Array<{ username: string; points: number }>;
+  finalBracket: {
+    participants: string[];
+    matchResults: { [key: string]: string };
+  };
+}
+
+const BracketResults: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [results, setResults] = useState<BracketResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        const token = Cookies.get('TOKEN');
+        console.log('Fetching results for bracket:', id);
+        const response = await axios.get(`/api/brackets/${id}/final-results`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log('Received response:', response.data);
+        setResults(response.data);
+      } catch (error) {
+        console.error('Error fetching bracket results:', error);
+        if (axios.isAxiosError(error)) {
+          console.error('Response data:', error.response?.data);
+          console.error('Response status:', error.response?.status);
+        }
+        setError('Failed to fetch bracket results. Please try again later.');
+      }
+    };
+
+    fetchResults();
+  }, [id]);
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!results) {
+    return <div>Loading results... (Bracket ID: {id})</div>;
+  }
+
+  if (!results.spectatorResults || results.spectatorResults.length === 0) {
+    return <div>No results available for this bracket.</div>;
+  }
+
+  const spectatorWinner = results.spectatorResults[0];
+
+  return (
+    <Container>
+      <h1>Bracket Results</h1>
+      <h2>Bracket Winner: {results.bracketWinner}</h2>
+      <h2>Spectator Winner: {spectatorWinner.username} ({spectatorWinner.points} points)</h2>
+
+      <BracketTree 
+        participants={results.finalBracket.participants} 
+        currentRound={Math.ceil(Math.log2(results.finalBracket.participants.length))}
+        matchResults={results.finalBracket.matchResults} 
+      />
+
+      <h3>Final Spectator Standings</h3>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Username</th>
+            <th>Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.spectatorResults.map((spectator, index) => (
+            <tr key={spectator.username}>
+              <td>{index + 1}</td>
+              <td>{spectator.username}</td>
+              <td>{spectator.points}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </Container>
+  );
+};
+
+export default BracketResults;

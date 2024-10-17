@@ -771,20 +771,28 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
     if (isCompleted) {
       bracket.status = 'completed';
       console.log('Bracket completed');
+      io.to(bracket._id.toString()).emit('bracketEnded', {
+        message: "Bracket has ended",
+        bracketId: bracket._id.toString(),
+        finalResults: {
+          bracketWinner: winner,
+          finalBracket: {
+            participants: bracket.originalParticipants,
+            matchResults: bracket.matchResults
+          }
+        }
+      });
     } else {
-      bracket.bettingPhase = true;
+      io.to(bracket._id.toString()).emit('matchEnded', {
+        winner,
+        nextMatch: bracket.currentMatch,
+        currentRound: bracket.currentRound,
+        currentMatchNumber: bracket.currentMatchNumber,
+        bettingPhase: true  // Set this to true for the next match's betting phase
+      });
     }
 
     await bracket.save();
-
-    io.to(bracket._id.toString()).emit('matchEnded', {
-      winner,
-      nextMatch: bracket.currentMatch,
-      currentRound: bracket.currentRound,
-      currentMatchNumber: bracket.currentMatchNumber,
-      bettingPhase: bracket.bettingPhase,
-      isCompleted: isCompleted
-    });
 
     res.json({ message: "Match result processed successfully", nextMatch: bracket.currentMatch, isCompleted: isCompleted });
   } catch (error) {
@@ -922,3 +930,44 @@ app.post(
     }
   },
 );
+
+app.get('/brackets/:id/final-results', auth, async (req: AuthenticatedRequest, res: Response) => {
+  console.log('Received request for bracket final results:', req.params.id);
+  try {
+    const bracket = await Bracket.findById(req.params.id).populate('spectators');
+    console.log('Found bracket:', bracket);
+    if (!bracket) {
+      return res.status(404).json({ message: "Bracket not found" });
+    }
+
+    console.log('Bracket status:', bracket.status);
+    console.log('Bracket participants:', bracket.participants);
+    console.log('Bracket spectators:', bracket.spectators);
+    console.log('Bracket match results:', bracket.matchResults);
+
+    const spectatorResults = bracket.spectators.map((spectator: any) => ({
+      username: spectator.username,
+      points: spectator.points
+    })).sort((a: any, b: any) => b.points - a.points);
+
+    const result = {
+      bracketWinner: bracket.participants[0],
+      spectatorResults,
+      finalBracket: {
+        participants: bracket.originalParticipants,
+        matchResults: bracket.matchResults
+      }
+    };
+
+    console.log('Sending result:', result);
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching bracket results:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.use((req, res, next) => {
+  console.log('Unmatched route:', req.method, req.url);
+  next();
+});
