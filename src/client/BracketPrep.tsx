@@ -253,7 +253,7 @@ const BracketPrep: React.FC = () => {
           bets={bets}
         />
       )}
-      {matchInProgress && currentMatch && (
+      {!bettingPhase && matchInProgress && currentMatch && (
         <MatchResult
           match={currentMatch}
           onSelectWinner={handleMatchResult}

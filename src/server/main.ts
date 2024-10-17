@@ -431,8 +431,9 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
   console.log('Current match results:', bracket.matchResults);
 
   const currentRoundWinners: string[] = [];
-  const matchesPerRound = Math.floor(bracket.participants.length / Math.pow(2, bracket.currentRound - 1) / 2);
-  console.log('Matches per round:', matchesPerRound);
+  const participantsInCurrentRound = bracket.participants.length;
+  const expectedWinnersForCurrentRound = participantsInCurrentRound / 2;
+  console.log('Expected winners for current round:', expectedWinnersForCurrentRound);
 
   // Process current round results
   bracket.matchResults.forEach((result: { round: number, winner: string }) => {
@@ -451,7 +452,7 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
   }
 
   // Check if we need to move to the next round
-  if (currentRoundWinners.length === matchesPerRound) {
+  if (currentRoundWinners.length === expectedWinnersForCurrentRound) {
     bracket.currentRound++;
     bracket.currentMatchNumber = 0;
     bracket.participants = currentRoundWinners;
