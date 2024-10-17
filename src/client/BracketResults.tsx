@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Table } from 'react-bootstrap';
-import { useParams } from 'react-router-dom';
+import { Container, Table, Button } from 'react-bootstrap';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import BracketTree from './BracketTree';
@@ -17,6 +17,7 @@ interface BracketResult {
 
 const BracketResults: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [results, setResults] = useState<BracketResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,10 @@ const BracketResults: React.FC = () => {
   if (!results) {
     return <div>Loading results... (Bracket ID: {id})</div>;
   }
+
+  const handleBackToBracket = () => {
+    navigate(`/bracket/${id}`);
+  };
 
   return (
     <Container>
@@ -90,6 +95,8 @@ const BracketResults: React.FC = () => {
         currentRound={Math.ceil(Math.log2(results.finalBracket.participants.length))}
         matchResults={results.finalBracket.matchResults} 
       />
+
+      <Button variant="primary" onClick={handleBackToBracket} className="mt-3">Back to Bracket Page</Button>
     </Container>
   );
 };
