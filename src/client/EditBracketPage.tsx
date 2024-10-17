@@ -22,12 +22,12 @@ function EditBracketPage() {
             Authorization: `Bearer ${token}`,
           },
         });
-        const bracket = response.data;
-        setName(bracket.name || '');
-        setDescription(bracket.description || '');
-        setType(bracket.type || '');
-        setParticipants(Array.isArray(bracket.participants) ? bracket.participants.join('\n') : '');
-        setStartingPoints(bracket.startingPoints ? bracket.startingPoints.toString() : '');
+        const bracketData = response.data.bracket; // Extract the nested bracket data
+        setName(bracketData.name || '');
+        setDescription(bracketData.description || '');
+        setType(bracketData.type || '');
+        setParticipants(Array.isArray(bracketData.originalParticipants) ? bracketData.originalParticipants.join('\n') : '');
+        setStartingPoints(bracketData.startingPoints ? bracketData.startingPoints.toString() : '');
       } catch (error) {
         console.error('Error fetching bracket:', error);
       }
@@ -40,8 +40,16 @@ function EditBracketPage() {
     event.preventDefault();
     try {
       const token = Cookies.get('TOKEN');
+      const participantsList = participants.split('\n').map(p => p.trim()).filter(p => p);
       const response = await axios.put(`/api/brackets/${id}`, 
-        { name, description, type, participants, startingPoints: parseInt(startingPoints) },
+        { 
+          name, 
+          description, 
+          type, 
+          participants: participantsList,
+          originalParticipants: participantsList,
+          startingPoints: parseInt(startingPoints) 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log(response.data);
