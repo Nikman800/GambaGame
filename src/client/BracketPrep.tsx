@@ -44,6 +44,7 @@ const BracketPrep: React.FC = () => {
       setBettingPhase(true);
       setBracketName(data.bracketName);
       setCurrentRound(data.currentRound);
+      setMatchResults({});
     });
 
     newSocket.on('matchStarted', () => {
@@ -65,9 +66,10 @@ const BracketPrep: React.FC = () => {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(data.bettingPhase);
         setCurrentRound(data.currentRound);
-        setMatchInProgress(true);  // Set this to true for the next match
       } else {
         setBracketStarted(false);
+        setCurrentMatch(null);
+        setCurrentRound(1);
       }
     });
 
@@ -85,7 +87,7 @@ const BracketPrep: React.FC = () => {
       setBettingPhase(false);
       setMatchInProgress(false);
       setCurrentRound(1);
-      setMatchResults(data.finalResults.finalBracket.matchResults);
+      setMatchResults({});
       navigate(`/bracket/${data.bracketId}/final-results`);
     });
 
