@@ -193,6 +193,23 @@ const bracketSchema = new mongoose.Schema({
   },
   currentRound: { type: Number, default: 1 },
   currentMatchNumber: { type: Number, default: 0 },
+  finalResults: [{
+    bracketWinner: String,
+    spectatorResults: [{
+      username: String,
+      points: Number
+    }],
+    finalBracket: {
+      participants: [String],
+      matchResults: [{
+        round: Number,
+        match: Number,
+        winner: String
+      }]
+    },
+    hasSpectators: Boolean,
+    completedAt: { type: Date, default: Date.now }
+  }]
 });
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
@@ -950,14 +967,22 @@ app.get('/brackets/:id/final-results', auth, async (req: AuthenticatedRequest, r
       points: spectator.points
     })).sort((a: any, b: any) => b.points - a.points);
 
+    const finalMatch = bracket.matchResults[bracket.matchResults.length - 1];
+    const bracketWinner = finalMatch ? finalMatch.winner : null;
+
     const result = {
-      bracketWinner: bracket.participants[0],
+      bracketWinner,
       spectatorResults,
       finalBracket: {
         participants: bracket.originalParticipants,
         matchResults: bracket.matchResults
-      }
+      },
+      hasSpectators: spectatorResults.length > 0
     };
+
+    // Push the new result to the finalResults array
+    bracket.finalResults.push(result);
+    await bracket.save();
 
     console.log('Sending result:', result);
     res.json(result);

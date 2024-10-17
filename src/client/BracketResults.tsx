@@ -12,6 +12,7 @@ interface BracketResult {
     participants: string[];
     matchResults: { [key: string]: string };
   };
+  hasSpectators: boolean;
 }
 
 const BracketResults: React.FC = () => {
@@ -52,43 +53,43 @@ const BracketResults: React.FC = () => {
     return <div>Loading results... (Bracket ID: {id})</div>;
   }
 
-  if (!results.spectatorResults || results.spectatorResults.length === 0) {
-    return <div>No results available for this bracket.</div>;
-  }
-
-  const spectatorWinner = results.spectatorResults[0];
-
   return (
     <Container>
       <h1>Bracket Results</h1>
-      <h2>Bracket Winner: {results.bracketWinner}</h2>
-      <h2>Spectator Winner: {spectatorWinner.username} ({spectatorWinner.points} points)</h2>
+      <h2>Bracket Winner: {results.bracketWinner || 'Not determined'}</h2>
+      
+      {results.hasSpectators ? (
+        <>
+          <h2>Spectator Winner: {results.spectatorResults[0].username} ({results.spectatorResults[0].points} points)</h2>
+          <h3>Final Spectator Standings</h3>
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Username</th>
+                <th>Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.spectatorResults.map((spectator, index) => (
+                <tr key={spectator.username}>
+                  <td>{index + 1}</td>
+                  <td>{spectator.username}</td>
+                  <td>{spectator.points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
+      ) : (
+        <h3>There were no spectators for this bracket.</h3>
+      )}
 
       <BracketTree 
         participants={results.finalBracket.participants} 
         currentRound={Math.ceil(Math.log2(results.finalBracket.participants.length))}
         matchResults={results.finalBracket.matchResults} 
       />
-
-      <h3>Final Spectator Standings</h3>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Username</th>
-            <th>Points</th>
-          </tr>
-        </thead>
-        <tbody>
-          {results.spectatorResults.map((spectator, index) => (
-            <tr key={spectator.username}>
-              <td>{index + 1}</td>
-              <td>{spectator.username}</td>
-              <td>{spectator.points}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
     </Container>
   );
 };
