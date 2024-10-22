@@ -33,6 +33,7 @@ const BracketPrep: React.FC = () => {
   const [gamblerCount, setGamblerCount] = useState(0);
   const [matchResults, setMatchResults] = useState<{ [key: string]: string }>({});
   const [currentPhase, setCurrentPhase] = useState('Regular');
+  const [currentMatchNumber, setCurrentMatchNumber] = useState(1);
 
   useEffect(() => {
     const newSocket = io('/');
@@ -44,7 +45,7 @@ const BracketPrep: React.FC = () => {
       setCurrentMatch(data.match);
       setBettingPhase(true);
       setBracketName(data.bracketName);
-      setCurrentRound(data.currentRound);
+      setCurrentMatchNumber(1);
       setMatchResults({});
     });
 
@@ -53,25 +54,22 @@ const BracketPrep: React.FC = () => {
       setMatchInProgress(true);
     });
 
-    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number, bettingPhase: boolean, currentPhase: string }) => {
+    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentMatchNumber: number, bettingPhase: boolean, currentPhase: string }) => {
       console.log('Match ended event received:', data);
       setMatchInProgress(false);
-      setMatchResults(prevResults => {
-        const matchIndex = Math.floor((data.currentMatchNumber - 1) / 2);
-        return {
-          ...prevResults,
-          [`${data.currentRound - 1}-${matchIndex}`]: data.winner
-        };
-      });
+      setMatchResults(prevResults => ({
+        ...prevResults,
+        [`${data.currentMatchNumber}`]: data.winner
+      }));
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(data.bettingPhase);
-        setCurrentRound(data.currentRound);
+        setCurrentMatchNumber(data.currentMatchNumber);
         setCurrentPhase(data.currentPhase);
       } else {
         setBracketStarted(false);
         setCurrentMatch(null);
-        setCurrentRound(1);
+        setCurrentMatchNumber(1);
         setCurrentPhase('Regular');
       }
     });
@@ -198,15 +196,10 @@ const BracketPrep: React.FC = () => {
         },
       });
       console.log('Match result submitted:', winner);
-      setMatchResults(prevResults => {
-        const matchIndex = currentMatch ? Math.floor((participants.indexOf(currentMatch.player1) % (participants.length / Math.pow(2, currentRound - 1))) / 2) : 0;
-        const newResults = {
-          ...prevResults,
-          [`${currentRound - 1}-${matchIndex}`]: winner
-        };
-        console.log('Updated matchResults:', newResults);
-        return newResults;
-      });
+      setMatchResults(prevResults => ({
+        ...prevResults,
+        [`${currentMatchNumber}`]: winner
+      }));
     } catch (error) {
       console.error('Error submitting match result:', error);
     }
@@ -223,7 +216,7 @@ const BracketPrep: React.FC = () => {
       )}
       {bracketStarted && currentMatch && (
         <div>
-          <h2>Round {currentRound} - {currentPhase}</h2>
+          <h2>Match {currentMatchNumber} - {currentPhase}</h2>
           <p>{currentMatch.player1} vs {currentMatch.player2}</p>
           {bettingPhase ? (
             <div>
