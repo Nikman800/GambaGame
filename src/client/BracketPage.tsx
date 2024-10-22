@@ -176,9 +176,9 @@ const BracketPage: React.FC = () => {
           }
         }
         
-        // console.log('Admin:', admin);
-        // console.log('Decoded USER_ID:', userId);
-        // console.log('Comparison:', admin && userId && admin.toString() === userId);
+        console.log('Admin:', admin);
+        console.log('Decoded USER_ID:', userId);
+        console.log('Comparison:', admin && userId && admin.toString() === userId);
         
         return admin && userId && admin.toString() === userId && (
           <>
