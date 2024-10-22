@@ -192,7 +192,7 @@ const bracketSchema = new mongoose.Schema({
     default: [],
   },
   currentRound: { type: Number, default: 1 },
-  currentMatchNumber: { type: Number, default: 0 },
+  currentMatchNumber: { type: Number, default: 1 },
   finalResults: [{
     bracketWinner: String,
     spectatorResults: [{
@@ -242,7 +242,7 @@ app.post(
         admin: req.user.userId,
         matchResults: [],
         currentRound: 1,
-        currentMatchNumber: 0,
+        currentMatchNumber: 1,
         status: "created",
       });
 
@@ -419,61 +419,42 @@ app.get(
   },
 );
 
-function manageBracketRounds(bracket: any): { currentMatch: { player1: string, player2: string } | null, isCompleted: boolean } {
-  console.log('Managing bracket rounds...');
-  
-  // If it's the first round, reset participants to originalParticipants
-  if (bracket.currentRound === 1 && bracket.currentMatchNumber === 0) {
-    bracket.participants = [...bracket.originalParticipants];
-  }
+function manageBracketRounds(bracket: any): { currentMatch: { player1: string, player2: string } | null, isCompleted: boolean, currentPhase: number } {
+  const totalParticipants = bracket.originalParticipants.length;
+  bracket.currentPhase = Math.ceil(Math.log2(totalParticipants / bracket.participants.length));
+  const matchesInRound = Math.floor(bracket.participants.length / 2);
 
+  console.log('Current round:', bracket.currentRound);
+  console.log('Current match number:', bracket.currentMatchNumber);
+  console.log('Matches in round:', matchesInRound);
   console.log('Current participants:', bracket.participants);
-  console.log('Current match results:', bracket.matchResults);
 
-  const currentRoundWinners: string[] = [];
-  const participantsInCurrentRound = bracket.participants.length;
-  const expectedWinnersForCurrentRound = participantsInCurrentRound / 2;
-  console.log('Expected winners for current round:', expectedWinnersForCurrentRound);
-
-  // Process current round results
-  bracket.matchResults.forEach((result: { round: number, winner: string }) => {
-    if (result.round === bracket.currentRound) {
-      currentRoundWinners.push(result.winner);
-    }
-  });
-
-  console.log('Current round winners:', currentRoundWinners);
-
-  // Check if the tournament is completed
-  const totalRounds = Math.ceil(Math.log2(bracket.originalParticipants.length));
-  if (bracket.currentRound === totalRounds && currentRoundWinners.length === 1) {
-    console.log('Tournament completed. Winner:', currentRoundWinners[0]);
-    return { currentMatch: null, isCompleted: true };
-  }
-
-  // Check if we need to move to the next round
-  if (currentRoundWinners.length === expectedWinnersForCurrentRound) {
+  if (bracket.currentMatchNumber > matchesInRound) {
+    // All matches in the current round are completed
     bracket.currentRound++;
-    bracket.currentMatchNumber = 0;
-    bracket.participants = currentRoundWinners;
+    bracket.currentMatchNumber = 1;
+    bracket.participants = bracket.participants.filter((p: string) => 
+      bracket.matchResults.some((r: any) => r.winner === p && r.round === bracket.currentRound - 1)
+    );
     console.log('Moving to next round:', bracket.currentRound);
+    bracket.currentPhase = Math.ceil(Math.log2(totalParticipants / bracket.participants.length));
   }
 
   const remainingParticipants = bracket.participants;
   console.log('Remaining participants:', remainingParticipants);
 
   if (remainingParticipants.length > 1) {
-    const nextMatchIndex = bracket.currentMatchNumber * 2;
+    const nextMatchIndex = (bracket.currentMatchNumber - 1) * 2;
     const currentMatch = {
       player1: remainingParticipants[nextMatchIndex],
       player2: remainingParticipants[nextMatchIndex + 1] || 'BYE'
     };
     console.log('Next match:', currentMatch);
     bracket.currentMatchNumber++;
-    return { currentMatch, isCompleted: false };
+    return { currentMatch, isCompleted: false, currentPhase: bracket.currentPhase };
   } else {
     console.log('No more matches to play');
-    return { currentMatch: null, isCompleted: true };
+    return { currentMatch: null, isCompleted: true, currentPhase: bracket.currentPhase };
   }
 }
 
@@ -490,12 +471,12 @@ app.post(
       // Reset bracket state
       bracket.matchResults.splice(0, bracket.matchResults.length);
       bracket.currentRound = 1;
-      bracket.currentMatchNumber = 0;
+      bracket.currentMatchNumber = 1;
       bracket.status = "started";
       bracket.bettingPhase = true;
       bracket.participants = [...bracket.originalParticipants]; // Reset participants
 
-      const { currentMatch, isCompleted } = manageBracketRounds(bracket);
+      const { currentMatch, isCompleted, currentPhase } = manageBracketRounds(bracket);
       bracket.currentMatch = currentMatch;
 
       await bracket.save();
@@ -624,31 +605,40 @@ app.put(
           .json({ message: "You are not authorized to end this bracket" });
       }
 
-      // Reset pertinent data
-      bracket.status = "completed";
-      bracket.currentMatch = null;
-      bracket.$set("bets", []);
-      bracket.gamblers.forEach((gambler) => {
-        gambler.points = bracket.startingPoints;
-      });
-      bracket.bettingPhase = false;
-      bracket.isOpen = false;
-      bracket.participants = [...bracket.originalParticipants]; // Reset participants to original list
-      bracket.currentRound = 1;
-      bracket.currentMatchNumber = 0;
-      bracket.$set('matchResults', []);
-      await bracket.save();
+      // Update the bracket document
+      const updatedBracket = await Bracket.findByIdAndUpdate(
+        req.params.id,
+        {
+          $set: {
+            status: "completed",
+            currentMatch: null,
+            bets: [],
+            bettingPhase: false,
+            isOpen: false,
+            participants: bracket.originalParticipants,
+            currentRound: 1,
+            currentMatchNumber: 1,
+            matchResults: [],
+            "gamblers.$[].points": bracket.startingPoints
+          }
+        },
+        { new: true }
+      );
 
-      io.to(bracket._id.toString()).emit("bracketEnded", {
+      if (!updatedBracket) {
+        return res.status(404).json({ message: "Failed to update bracket" });
+      }
+
+      io.to(updatedBracket._id.toString()).emit("bracketEnded", {
         message: "The bracket has ended",
-        bracketId: bracket._id,
-        participants: bracket.participants,
+        bracketId: updatedBracket._id,
+        participants: updatedBracket.participants,
       });
 
       res.json({
         message: "Bracket ended successfully",
-        bracketId: bracket._id,
-        participants: bracket.participants,
+        bracketId: updatedBracket._id,
+        participants: updatedBracket.participants,
       });
     } catch (error) {
       console.error("Error ending bracket:", error);
@@ -776,7 +766,7 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
     });
 
     // Manage next round
-    const { currentMatch, isCompleted } = manageBracketRounds(bracket);
+    const { currentMatch, isCompleted, currentPhase } = manageBracketRounds(bracket);
     bracket.currentMatch = currentMatch;
 
     if (isCompleted) {
@@ -794,12 +784,13 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
         }
       });
     } else {
-      io.to(bracket._id.toString()).emit('matchEnded', {
-        winner,
-        nextMatch: bracket.currentMatch,
+      io.to(bracket._id.toString()).emit("matchEnded", {
+        winner: req.body.winner,
+        nextMatch: currentMatch,
         currentRound: bracket.currentRound,
         currentMatchNumber: bracket.currentMatchNumber,
-        bettingPhase: true  // Set this to true for the next match's betting phase
+        bettingPhase: true,
+        currentPhase
       });
     }
 
@@ -990,3 +981,4 @@ app.use((req, res, next) => {
   console.log('Unmatched route:', req.method, req.url);
   next();
 });
+

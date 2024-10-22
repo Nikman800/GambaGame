@@ -12,15 +12,24 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
   const rounds = Math.ceil(Math.log2(participants.length));
 
   const generateBracket = (): string[][] => {
+    // console.log('--- Generating Bracket ---');
+    // console.log('Participants:', participants);
+    // console.log('Current round:', currentRound);
+    // console.log('Match results:', matchResults);
+    
     const bracket: string[][] = [participants];
     
     for (let round = 1; round < rounds; round++) {
       const previousRound = bracket[round - 1];
       const currentRound: string[] = [];
       
+      // console.log(`Generating round ${round + 1}`);
+      
       for (let i = 0; i < previousRound.length; i += 2) {
         const matchId = `${round - 1}-${Math.floor(i / 2)}`;
         const winner = matchResults[matchId];
+        
+        // console.log(`Match ${matchId}: Winner - ${winner || 'TBD'}`);
         
         if (winner) {
           currentRound.push(winner);
@@ -32,6 +41,7 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
       bracket.push(currentRound);
     }
 
+    // console.log('Generated bracket:', bracket);
     return bracket;
   };
 
