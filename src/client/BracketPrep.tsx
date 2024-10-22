@@ -32,6 +32,7 @@ const BracketPrep: React.FC = () => {
   const [bets, setBets] = useState<any[]>([]);
   const [gamblerCount, setGamblerCount] = useState(0);
   const [matchResults, setMatchResults] = useState<{ [key: string]: string }>({});
+  const [currentPhase, setCurrentPhase] = useState('Regular');
 
   useEffect(() => {
     const newSocket = io('/');
@@ -52,7 +53,7 @@ const BracketPrep: React.FC = () => {
       setMatchInProgress(true);
     });
 
-    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number, bettingPhase: boolean }) => {
+    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentRound: number, currentMatchNumber: number, bettingPhase: boolean, currentPhase: string }) => {
       console.log('Match ended event received:', data);
       setMatchInProgress(false);
       setMatchResults(prevResults => {
@@ -66,10 +67,12 @@ const BracketPrep: React.FC = () => {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(data.bettingPhase);
         setCurrentRound(data.currentRound);
+        setCurrentPhase(data.currentPhase);
       } else {
         setBracketStarted(false);
         setCurrentMatch(null);
         setCurrentRound(1);
+        setCurrentPhase('Regular');
       }
     });
 
@@ -220,7 +223,7 @@ const BracketPrep: React.FC = () => {
       )}
       {bracketStarted && currentMatch && (
         <div>
-          <h2>Round {currentRound}</h2>
+          <h2>Round {currentRound} - {currentPhase}</h2>
           <p>{currentMatch.player1} vs {currentMatch.player2}</p>
           {bettingPhase ? (
             <div>

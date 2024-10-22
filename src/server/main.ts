@@ -209,7 +209,8 @@ const bracketSchema = new mongoose.Schema({
     },
     hasSpectators: Boolean,
     completedAt: { type: Date, default: Date.now }
-  }]
+  }],
+  currentPhase: { type: String, default: 'Regular' },
 });
 
 const Bracket = mongoose.model("Bracket", bracketSchema);
@@ -458,6 +459,21 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
     bracket.participants = currentRoundWinners;
     console.log('Moving to next round:', bracket.currentRound);
   }
+
+  // Determine current phase
+  function determineCurrentPhase(currentRound: number, totalRounds: number): string {
+    if (currentRound === totalRounds) {
+      return 'Finals';
+    } else if (currentRound === totalRounds - 1) {
+      return 'Semifinals';
+    } else if (currentRound === totalRounds - 2) {
+      return 'Quarterfinals';
+    } else {
+      return 'Regular';
+    }
+  }
+
+  bracket.currentPhase = determineCurrentPhase(bracket.currentRound, totalRounds);
 
   const remainingParticipants = bracket.participants;
   console.log('Remaining participants:', remainingParticipants);
@@ -799,7 +815,8 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
         nextMatch: bracket.currentMatch,
         currentRound: bracket.currentRound,
         currentMatchNumber: bracket.currentMatchNumber,
-        bettingPhase: true  // Set this to true for the next match's betting phase
+        bettingPhase: true,
+        currentPhase: bracket.currentPhase
       });
     }
 
