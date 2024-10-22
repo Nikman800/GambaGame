@@ -10,12 +10,7 @@ interface BracketResult {
   spectatorResults: Array<{ username: string; points: number }>;
   finalBracket: {
     participants: string[];
-    matchResults: Array<{
-      round: number;
-      match: number;
-      winner: string;
-      _id: string;
-    }>;
+    matchResults: { [key: string]: string };
   };
   hasSpectators: boolean;
 }
@@ -96,12 +91,9 @@ const BracketResults: React.FC = () => {
       )}
 
       <BracketTree 
-        participants={results.finalBracket.participants}
+        participants={results.finalBracket.participants} 
         currentRound={Math.ceil(Math.log2(results.finalBracket.participants.length))}
-        matchResults={results.finalBracket.matchResults.reduce((acc, match) => {
-          acc[`${match.round - 1}-${match.match - 1}`] = match.winner;
-          return acc;
-        }, {} as { [key: string]: string })}
+        matchResults={results.finalBracket.matchResults} 
       />
 
       <Button variant="primary" onClick={handleBackToBracket} className="mt-3">Back to Bracket Page</Button>

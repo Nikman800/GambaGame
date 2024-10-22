@@ -26,15 +26,17 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
       // console.log(`Generating round ${round + 1}`);
       
       for (let i = 0; i < previousRound.length; i += 2) {
-        const matchId = `${round - 1}-${Math.floor(i / 2)}`;
+        const matchId = `${round - 1}-${i / 2}`;
         const winner = matchResults[matchId];
         
         // console.log(`Match ${matchId}: Winner - ${winner || 'TBD'}`);
         
         if (winner) {
           currentRound.push(winner);
-        } else {
+        } else if (i + 1 < previousRound.length) {
           currentRound.push('TBD');
+        } else {
+          currentRound.push(previousRound[i]);
         }
       }
       
@@ -78,6 +80,9 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
   return (
     <Container className="bracket-tree">
       {bracket.map((roundParticipants, index) => renderRound(roundParticipants, index))}
+      {bracket[bracket.length - 1][0] !== 'TBD' && (
+        <div className="winner-tag">Winner: {bracket[bracket.length - 1][0]}</div>
+      )}
     </Container>
   );
 };
