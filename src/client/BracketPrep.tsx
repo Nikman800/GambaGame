@@ -54,18 +54,24 @@ const BracketPrep: React.FC = () => {
       setMatchInProgress(true);
     });
 
-    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentMatchNumber: number, bettingPhase: boolean, currentPhase: string }) => {
+    newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentMatchNumber: number, currentRound: number, bettingPhase: boolean, currentPhase: string }) => {
       console.log('Match ended event received:', data);
       setMatchInProgress(false);
+      setMatchResults(prevResults => ({
+        ...prevResults,
+        [`${data.currentRound}-${data.currentMatchNumber}`]: data.winner
+      }));
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(data.bettingPhase);
         setCurrentMatchNumber(data.currentMatchNumber);
+        setCurrentRound(data.currentRound);
         setCurrentPhase(data.currentPhase);
       } else {
         setBracketStarted(false);
         setCurrentMatch(null);
         setCurrentMatchNumber(1);
+        setCurrentRound(1);
         setCurrentPhase('Regular');
       }
     });
@@ -192,10 +198,7 @@ const BracketPrep: React.FC = () => {
         },
       });
       console.log('Match result submitted:', winner);
-      setMatchResults(prevResults => ({
-        ...prevResults,
-        [`${currentMatchNumber}`]: winner
-      }));
+      // Remove the setMatchResults call from here
     } catch (error) {
       console.error('Error submitting match result:', error);
     }

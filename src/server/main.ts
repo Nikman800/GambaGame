@@ -479,12 +479,12 @@ function manageBracketRounds(bracket: any): { currentMatch: { player1: string, p
   console.log('Remaining participants:', remainingParticipants);
 
   if (remainingParticipants.length > 1) {
-    const nextMatchIndex = bracket.currentMatchNumber * 2;
+    const currentMatchIndex = bracket.currentMatchNumber;
     const currentMatch = {
-      player1: remainingParticipants[nextMatchIndex],
-      player2: remainingParticipants[nextMatchIndex + 1] || 'BYE'
+      player1: remainingParticipants[currentMatchIndex * 2],
+      player2: remainingParticipants[currentMatchIndex * 2 + 1] || 'BYE'
     };
-    console.log('Next match:', currentMatch);
+    console.log('Current match:', currentMatch);
     bracket.currentMatchNumber++;
     return { currentMatch, isCompleted: false };
   } else {
@@ -826,7 +826,7 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
         winner,
         nextMatch: bracket.currentMatch,
         currentRound: bracket.currentRound,
-        currentMatchNumber: bracket.currentMatchNumber,
+        currentMatchNumber: bracket.currentMatchNumber - 1, // Use the current match number
         bettingPhase: true,
         currentPhase: bracket.currentPhase
       });
