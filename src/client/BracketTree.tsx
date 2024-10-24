@@ -5,7 +5,7 @@ import './BracketTree.css';
 interface BracketTreeProps {
   participants: string[];
   currentRound: number;
-  matchResults: { [key: string]: string };
+  matchResults: Array<{ round: number; match: number; winner: string }> | { [key: string]: string };
 }
 
 const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, matchResults }) => {
@@ -19,8 +19,14 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
       const currentRound: string[] = [];
       
       for (let i = 0; i < previousRound.length; i += 2) {
-        const matchId = `${round - 1}-${Math.floor(i / 2)}`;
-        const winner = matchResults[matchId];
+        const matchNumber = Math.floor(i / 2);
+        let winner;
+        if (Array.isArray(matchResults)) {
+          const result = matchResults.find(r => r.round === round && r.match === matchNumber);
+          winner = result ? result.winner : undefined;
+        } else {
+          winner = matchResults[`${round}-${matchNumber}`];
+        }
         
         if (winner) {
           currentRound.push(winner);
@@ -38,11 +44,16 @@ const BracketTree: React.FC<BracketTreeProps> = ({ participants, currentRound, m
   const bracket = generateBracket();
 
   const renderMatch = (player1: string, player2: string | undefined, roundIndex: number, matchIndex: number) => {
-    const matchId = `${roundIndex}-${matchIndex}`;
-    const winner = matchResults[matchId];
+    let winner;
+    if (Array.isArray(matchResults)) {
+      const result = matchResults.find(r => r.round === roundIndex + 1 && r.match === matchIndex);
+      winner = result ? result.winner : undefined;
+    } else {
+      winner = matchResults[`${roundIndex + 1}-${matchIndex}`];
+    }
 
     return (
-      <div key={`match-${matchId}`} className="match">
+      <div key={`match-${roundIndex}-${matchIndex}`} className="match">
         <div className="match-wrapper">
           <div className={`participant ${winner === player1 ? 'winner' : ''}`}>{player1}</div>
           {player2 && <div className={`participant ${winner === player2 ? 'winner' : ''}`}>{player2}</div>}

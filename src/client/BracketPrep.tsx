@@ -57,10 +57,6 @@ const BracketPrep: React.FC = () => {
     newSocket.on('matchEnded', (data: { winner: string, nextMatch: { player1: string, player2: string } | null, currentMatchNumber: number, bettingPhase: boolean, currentPhase: string }) => {
       console.log('Match ended event received:', data);
       setMatchInProgress(false);
-      setMatchResults(prevResults => ({
-        ...prevResults,
-        [`${data.currentMatchNumber}`]: data.winner
-      }));
       if (data.nextMatch) {
         setCurrentMatch(data.nextMatch);
         setBettingPhase(data.bettingPhase);
