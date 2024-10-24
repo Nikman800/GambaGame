@@ -798,16 +798,28 @@ app.post("/brackets/:id/match-result", auth, async (req: AuthenticatedRequest, r
     if (isCompleted) {
       bracket.status = 'completed';
       console.log('Bracket completed');
+
+      const spectatorResults = bracket.spectators.map((spectator: any) => ({
+        username: spectator.username,
+        points: spectator.points
+      })).sort((a: any, b: any) => b.points - a.points);
+
+      const result = {
+        bracketWinner: winner,
+        spectatorResults,
+        finalBracket: {
+          participants: bracket.originalParticipants,
+          matchResults: bracket.matchResults
+        },
+        hasSpectators: spectatorResults.length > 0
+      };
+
+      bracket.finalResults.push(result);
+      
       io.to(bracket._id.toString()).emit('bracketEnded', {
         message: "Bracket has ended",
         bracketId: bracket._id.toString(),
-        finalResults: {
-          bracketWinner: winner,
-          finalBracket: {
-            participants: bracket.originalParticipants,
-            matchResults: bracket.matchResults
-          }
-        }
+        finalResults: result
       });
     } else {
       io.to(bracket._id.toString()).emit('matchEnded', {
@@ -968,33 +980,11 @@ app.get('/brackets/:id/final-results', auth, async (req: AuthenticatedRequest, r
       return res.status(404).json({ message: "Bracket not found" });
     }
 
-    console.log('Bracket status:', bracket.status);
-    console.log('Bracket participants:', bracket.participants);
-    console.log('Bracket spectators:', bracket.spectators);
-    console.log('Bracket match results:', bracket.matchResults);
+    if (!bracket.finalResults || bracket.finalResults.length === 0) {
+      return res.status(404).json({ message: "No final results found for this bracket" });
+    }
 
-    const spectatorResults = bracket.spectators.map((spectator: any) => ({
-      username: spectator.username,
-      points: spectator.points
-    })).sort((a: any, b: any) => b.points - a.points);
-
-    const finalMatch = bracket.matchResults[bracket.matchResults.length - 1];
-    const bracketWinner = finalMatch ? finalMatch.winner : null;
-
-    const result = {
-      bracketWinner,
-      spectatorResults,
-      finalBracket: {
-        participants: bracket.originalParticipants,
-        matchResults: bracket.matchResults
-      },
-      hasSpectators: spectatorResults.length > 0
-    };
-
-    // Push the new result to the finalResults array
-    bracket.finalResults.push(result);
-    await bracket.save();
-
+    const result = bracket.finalResults[bracket.finalResults.length - 1];
     console.log('Sending result:', result);
     res.json(result);
   } catch (error) {
@@ -1007,3 +997,4 @@ app.use((req, res, next) => {
   console.log('Unmatched route:', req.method, req.url);
   next();
 });
+
